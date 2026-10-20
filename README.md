@@ -17,4 +17,4 @@ Each weekday has its own code theme (see `THEMES` in `src/engine.js`): anagrams,
 
 ## Player tracking
 
-The live site counts visits and game events with [GoatCounter](https://www.goatcounter.com) (free, no cookies). The site code is set in `package.json` under `config.goatcounter`. Events: `started/case-N`, `solved/case-N/in-K`, `failed/case-N`.
+Visits are counted with Cloudflare Web Analytics (token in `package.json` under `config.cloudflareBeacon`). The live site counts visits and game events with [GoatCounter](https://www.goatcounter.com) (free, no cookies). The site code is set in `package.json` under `config.goatcounter`. Events: `started/case-N`, `solved/case-N/in-K`, `failed/case-N`.
