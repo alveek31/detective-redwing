@@ -425,7 +425,7 @@ dialog ol, dialog ul { padding-left: 20px; }
 
   // Anonymous play counts for the live site (GoatCounter, no cookies). Does nothing where the counter script is absent.
   function track(name) {
-    try { if (window.goatcounter && window.goatcounter.count) window.goatcounter.count({ path: name, title: name, event: true }); } catch (e) {}
+    try { if (window.goatcounter && window.goatcounter.count) window.goatcounter.count({ path: name, title: name + " · " + C.theme, event: true }); } catch (e) {}
   }
   function caseTag() { return current.kind === "daily" ? "case-" + caseNo(current.date) : "practice"; }
 
