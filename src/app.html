@@ -57,10 +57,6 @@ section { display: flex; flex-direction: column; gap: 12px; }
 .code { display: block; font: 500 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--brass); margin-bottom: 2px; }
 .ciph { font-family: var(--mono); font-size: 14px; letter-spacing: .02em; }
 .decoded { display: block; color: var(--muted); font-size: 13px; margin-top: 4px; }
-.lock { border: 1px dashed var(--brass); padding: 12px 14px; border-radius: 3px; display: flex; flex-direction: column; gap: 8px; }
-.lock form { display: flex; gap: 8px; flex-wrap: wrap; }
-.lock input { flex: 1 1 160px; min-width: 0; font: inherit; padding: 7px 10px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); border-radius: 4px; }
-.lock.open { border-style: solid; }
 .clues.hints li::before { content: "Hint " counter(c); }
 .clues.hints li { grid-template-columns: 52px 1fr; }
 .clues li.sealed { background: var(--seal); border-style: dashed; color: var(--muted); font-style: italic; }
@@ -148,7 +144,6 @@ dialog ol, dialog ul { padding-left: 20px; }
     <div><span class="label">Evidence</span><h2>What the household told you</h2></div>
     <ol class="clues" id="clues"></ol>
     <p class="hint">Some evidence arrives in code, and each clue says which kind. This evidence is enough to name the killer with certainty. Each wrong accusation unseals one extra hint below.</p>
-    <div class="lock" id="lock"></div>
     <ol class="clues hints" id="hints"></ol>
   </section>
 
@@ -179,8 +174,7 @@ dialog ol, dialog ul { padding-left: 20px; }
   <p>Every day there is one new murder at Redwing Manor. Five guests, five items, five rooms. One guest is the killer.</p>
   <ol>
     <li>Read the scene and the evidence. Use the dossier: height, handedness, how heavy an item is, and whether a room is indoors.</li>
-    <li>Crack the coded evidence. Each day of the week brings different codes: anagrams, trivia, number codes, Morse, mirror writing and shifted-letter notes. Every coded clue says how it was encoded.</li>
-    <li>Solve the word lock for a free bonus clue: name what three things are all types of. It never costs an accusation.</li>
+    <li>Crack the coded evidence. Each day of the week brings different codes: anagrams, trivia, general knowledge (Merlot and Malbec point to the Wine Cellar), number codes, Morse, mirror writing and shifted-letter notes. Every coded clue says how it was encoded.</li>
     <li>Mark your notebook. Each guest pairs with exactly one item and one room.</li>
     <li>Accuse a suspect, weapon and location. You have 6 accusations.</li>
     <li>A wrong accusation tells you nothing except that you were wrong, and unseals a hint.</li>
@@ -285,28 +279,9 @@ dialog ol, dialog ul { padding-left: 20px; }
     });
     freshIdx = -1;
 
-    renderLock();
     renderNotebook();
     renderPicker();
     renderVerdict();
-  }
-
-  function renderLock() {
-    var box = $("lock"); box.innerHTML = "";
-    var open = state.lockOpen || state.done;
-    box.className = "lock" + (open ? " open" : "");
-    box.appendChild(el("span", { class: "code", text: open ? "Word lock · opened" : "Word lock · optional bonus clue" }));
-    box.appendChild(el("span", { text: C.lock.question }));
-    if (open) { box.appendChild(el("b", { text: C.lock.bonus })); return; }
-    var f = el("form"), inp = el("input", { id: "lockInput", placeholder: "Type your answer", autocomplete: "off", "aria-label": "Word lock answer" });
-    f.appendChild(inp); f.appendChild(el("button", { class: "btn", type: "submit", text: "Unlock" }));
-    f.addEventListener("submit", function (e) {
-      e.preventDefault();
-      var v = inp.value.trim().toLowerCase().replace(/^(an?|the) /, "");
-      if (C.lock.answers.indexOf(v) >= 0) { state.lockOpen = true; save(); track("lock-opened/" + caseTag()); renderLock(); toast("Unlocked. A bonus clue is yours."); }
-      else toast("The lock does not budge. Try another word.");
-    });
-    box.appendChild(f);
   }
 
   function renderNotebook() {

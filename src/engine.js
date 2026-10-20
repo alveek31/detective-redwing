@@ -52,21 +52,25 @@ var Redwing = (function () {
     "Boathouse": "building where rowers keep their eights",
     "Orchard": "place Newton is said to have watched an apple fall"
   };
-  // Word locks: name what the three things are all types of, to open a bonus clue.
-  var LOCKS = [
-    { items: "Redwing, Red Baron and Sturon", answers: ["onion", "onions"] },
-    { items: "Bramley, Cox and Granny Smith", answers: ["apple", "apples"] },
-    { items: "Maris Piper, King Edward and Charlotte", answers: ["potato", "potatoes"] },
-    { items: "Darjeeling, Assam and Oolong", answers: ["tea", "teas"] },
-    { items: "Stilton, Wensleydale and Cheddar", answers: ["cheese", "cheeses"] },
-    { items: "Beagle, Basset and Bloodhound", answers: ["dog", "dogs", "hound", "hounds"] },
-    { items: "Arabica, Robusta and Liberica", answers: ["coffee", "coffee bean", "coffee beans"] },
-    { items: "Merlot, Shiraz and Malbec", answers: ["grape", "grapes", "wine", "wines", "red wine"] },
-    { items: "Cirrus, Cumulus and Nimbus", answers: ["cloud", "clouds"] },
-    { items: "Penny Black, Penny Red and Inverted Jenny", answers: ["stamp", "stamps", "postage stamp"] },
-    { items: "Sirloin, Ribeye and Rump", answers: ["steak", "steaks", "beef"] },
-    { items: "Fedora, Bowler and Deerstalker", answers: ["hat", "hats"] }
-  ];
+  // General-knowledge disguises: you must know what these things are a type of to tell which item or room is meant.
+  var KNOW = {
+    "Candlestick": "item that held a beeswax taper",
+    "Letter Opener": "item a clerk would slide under a seal",
+    "Revolver": "weapon of the Colt and Webley kind",
+    "Poison Vial": "item that once held belladonna",
+    "Rope": "item tied in a bowline and a sheepshank",
+    "Fire Poker": "item from the companion set by the hearth",
+    "Walking Cane": "item cut from malacca or blackthorn",
+    "Bronze Bust": "item cast by the same craft as Rodin's Thinker",
+    "Library": "room shelved with Jane Eyre, Middlemarch and Persuasion",
+    "Conservatory": "room where the Monstera and the Calathea grow",
+    "Wine Cellar": "room that holds the Merlot, the Malbec and the Shiraz",
+    "Billiard Room": "room where guests practise the massé and the jump shot",
+    "Garden Maze": "place built on the pattern of the Cretan labyrinth",
+    "Stables": "place where the Arabian, the Clydesdale and the Shire sleep",
+    "Boathouse": "building that holds the skiff, the punt and the coracle",
+    "Orchard": "place where the Bramleys and the Cox grow"
+  };
   var SIZE = 5;
   var ATTEMPTS = 6;
 
@@ -275,18 +279,18 @@ var Redwing = (function () {
   };
   // One theme per weekday (0 = Sunday), so each day of the week plays differently.
   var THEMES = [
-    { name: "Grand Sunday", codes: ["morse", "trivia", "anagram", "caesar"] },
-    { name: "Gentle Monday", codes: ["trivia"] },
-    { name: "Scrambled Tuesday", codes: ["anagram", "caesar"] },
-    { name: "Numbers Wednesday", codes: ["numbers", "atbash"] },
+    { name: "Grand Sunday", codes: ["morse", "knowledge", "trivia", "anagram", "caesar"] },
+    { name: "Gentle Monday", codes: ["knowledge", "trivia"] },
+    { name: "Scrambled Tuesday", codes: ["anagram", "knowledge", "caesar"] },
+    { name: "Numbers Wednesday", codes: ["numbers", "knowledge", "atbash"] },
     { name: "Looking-glass Thursday", codes: ["mirror", "trivia", "reverse"] },
-    { name: "Telegraph Friday", codes: ["morse", "trivia", "caesar"] },
-    { name: "Puzzler's Saturday", codes: ["anagram", "numbers", "trivia", "atbash"] }
+    { name: "Telegraph Friday", codes: ["morse", "knowledge", "caesar"] },
+    { name: "Puzzler's Saturday", codes: ["anagram", "numbers", "knowledge", "trivia", "atbash"] }
   ];
   function letters(name) { return name.toUpperCase().replace(/[^A-Z]/g, ""); }
   // Find a name in the clue that a code can replace. Suspects use their surname; items and rooms need "the X".
   function findName(c, S, W, L, code) {
-    if (code !== "trivia") {
+    if (code !== "trivia" && code !== "knowledge") {
       var s = S.filter(function (x) { return c.text.indexOf(x.name) >= 0 && c.text.indexOf(x.name + "'s") < 0; })[0];
       if (s) return { from: s.name, word: letters(s.name.split(" ").pop()), cat: "the guest whose surname", the: false, name: s.name };
     }
@@ -319,9 +323,9 @@ var Redwing = (function () {
         } else {
           var hit = findName(c, S, W, L, code);
           if (!hit) continue;
-          var phrase = code === "trivia" ? "the " + TRIVIA[hit.name] : NAME_CODES[code](hit.word, hit.cat, rng).phrase;
+          var phrase = code === "trivia" ? "the " + TRIVIA[hit.name] : code === "knowledge" ? "the " + KNOW[hit.name] : NAME_CODES[code](hit.word, hit.cat, rng).phrase;
           c.text = swapName(c.text, hit, phrase);
-          c.code = code === "trivia" ? "Trivia" : NAME_CODES[code](hit.word, hit.cat, rng).label;
+          c.code = code === "trivia" ? "Trivia" : code === "knowledge" ? "General knowledge · what is it a type of?" : NAME_CODES[code](hit.word, hit.cat, rng).label;
         }
         free.splice(n, 1);
         return;
@@ -379,10 +383,6 @@ var Redwing = (function () {
         { text: "Hint: the killer did not use the " + W[(sol.w[m] + 1) % SIZE].name + " and was not in the " + L[(sol.l[m] + 1) % SIZE].name + ".", kind: "hint" }
       ];
       hints = hints.concat([pick(strong, rng)]).slice(0, ATTEMPTS - 1);
-      // Bonus clue behind the word lock: a direct fact not already used.
-      var given = {}; chosen.concat(hints).forEach(function (c) { given[c.plain || c.text] = true; });
-      var bonus = spare.filter(function (c) { return !given[c.text] && (c.kind === "pos" || c.kind === "or"); })[0] || spare[0];
-      var lock = seed === "daily-2026-10-20" ? LOCKS[0] : pick(LOCKS, rng);
       // Walkthrough: after each core clue, which facts became certain.
       var steps = [], wp = ALL, known = {};
       chosen.forEach(function (c, ci) {
@@ -402,7 +402,6 @@ var Redwing = (function () {
         clues: chosen.map(function (c) { return { text: c.text, plain: c.plain, code: c.code, cipher: !!c.cipher, kind: c.kind }; }),
         hints: hints.map(function (c) { return { text: c.text, kind: c.kind }; }),
         steps: steps,
-        lock: { question: lock.items + " are all types of what?", answers: lock.answers, bonus: bonus.text },
         attempts: ATTEMPTS,
         _check: function () { return answers(chosen, mc); },
         _checkPrefix: function (k) { return answers(chosen.slice(0, k), mc); }
