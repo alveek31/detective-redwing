@@ -2,9 +2,9 @@
 const fs = require('fs');
 const src = (f) => fs.readFileSync(__dirname + '/src/' + f, 'utf8');
 const cfg = require('./package.json').config || {};
-// Visit counts (Cloudflare Web Analytics) and game events (the stats Worker in stats/), both cookie-free and visible only to the site owner.
+// Visit counts (Cloudflare Web Analytics) and game events (GoatCounter), both cookie-free and visible only to the site owner.
 const analytics = (cfg.cloudflareBeacon ? '<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon=\'{"token": "' + cfg.cloudflareBeacon + '"}\'></script>\n' : '') +
-  (cfg.statsUrl ? '<script>window.BB_STATS = ' + JSON.stringify(cfg.statsUrl.replace(/\/+$/, '') + '/e') + ';</script>\n' : '');
+  (cfg.goatcounter ? '<script data-goatcounter="https://' + cfg.goatcounter + '.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>\n' : '');
 const page = (body) => '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<style>[hidden]{display:none!important} body{margin:0}</style>\n</head>\n<body>\n' + body + '\n' + analytics + '</body>\n</html>\n';
 const write = (path, html) => { fs.mkdirSync(require('path').dirname(path), { recursive: true }); fs.writeFileSync(path, html); console.log('Built ' + path.replace(__dirname + '/', '')); };
 
