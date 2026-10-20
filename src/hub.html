@@ -1,0 +1,60 @@
+<title>Brainbrew</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Libre+Franklin:wght@400;600&display=swap">
+<style>
+/* Layout: one short column, brand mark then a shelf of game cards that wraps to one column on phones. */
+:root {
+  --bg: #F1F3EE; --card: #FFFFFF; --ink: #17201C; --muted: #5A645F; --line: #D3D9D2; --brew: #2E6B57; --red: #8B1E2D;
+  --display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body: "Libre Franklin", "Helvetica Neue", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111613; --card: #18201C; --ink: #E6EAE5; --muted: #9AA59F; --line: #2B3530; --brew: #6CC3A4; --red: #D9566A; color-scheme: dark } }
+:root[data-theme="dark"] { --bg: #111613; --card: #18201C; --ink: #E6EAE5; --muted: #9AA59F; --line: #2B3530; --brew: #6CC3A4; --red: #D9566A; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--ink); font: 16px/1.55 var(--body); }
+.wrap { max-width: 880px; margin: 0 auto; padding-block: 48px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 40px; }
+h1 { font: 800 clamp(44px, 10vw, 84px)/.95 var(--display); letter-spacing: -.03em; margin: 0; }
+h1 span { color: var(--brew); }
+.lede { font-size: 18px; color: var(--muted); max-width: 46ch; margin: 12px 0 0; }
+.shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+.game { display: flex; flex-direction: column; gap: 10px; padding: 22px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); color: inherit; text-decoration: none; transition: transform .15s ease, border-color .15s ease; }
+.game:hover { transform: translateY(-2px); border-color: var(--ink); }
+.game:focus-visible { outline: 2px solid var(--brew); outline-offset: 3px; }
+.game h2 { font: 800 26px/1.1 var(--display); margin: 0; }
+.game h2 span { color: var(--red); }
+.game p { margin: 0; color: var(--muted); }
+.tag { font: 600 12px var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--brew); }
+.play { margin-top: auto; font-weight: 600; }
+.soon { border-style: dashed; background: transparent; }
+.soon h2 { color: var(--muted); }
+footer { color: var(--muted); font-size: 13px; }
+@media (prefers-reduced-motion: reduce) { .game { transition: none; } }
+</style>
+<div class="wrap">
+  <header>
+    <h1>Brain<span>brew</span></h1>
+    <p class="lede">Small daily puzzles worth a coffee break. A new one every day, the same for everyone.</p>
+  </header>
+  <main class="shelf">
+    <a class="game" href="redwing/">
+      <span class="tag" id="redwingTag">Daily logic mystery</span>
+      <h2>Detective <span>Redwing</span></h2>
+      <p>Five guests, five weapons, five rooms. Crack the coded evidence and name the killer in six accusations.</p>
+      <span class="play">Play today's case →</span>
+    </a>
+    <div class="game soon">
+      <span class="tag">Brewing</span>
+      <h2>More games soon</h2>
+      <p>New daily puzzles are on the way.</p>
+    </div>
+  </main>
+  <footer>brainbrew.fun</footer>
+</div>
+<script>
+(function () {
+  var n = Math.round((new Date(new Date().toDateString()) - new Date(2026, 9, 20)) / 864e5) + 1;
+  if (n >= 1) document.getElementById("redwingTag").textContent = "Daily logic mystery · Case No. " + n;
+})();
+</script>

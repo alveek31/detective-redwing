@@ -26,6 +26,8 @@ body { background: var(--paper); color: var(--ink); font: 15px/1.55 var(--body);
 header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
   border-bottom: 2px solid var(--ink); padding-bottom: 12px; }
 .brand { display: flex; flex-direction: column; }
+.home { font: 600 12px var(--body); color: var(--muted); text-decoration: none; margin-bottom: 6px; }
+.home:hover { color: var(--accent); }
 .brand h1 { font: 400 clamp(30px, 6vw, 44px)/1 var(--display-sc); margin: 0; letter-spacing: .01em; }
 .brand h1 span { color: var(--accent); }
 .meta { font: 500 12px/1.4 var(--mono); color: var(--muted); letter-spacing: .06em; text-transform: uppercase; margin-top: 6px; }
@@ -135,6 +137,7 @@ dialog ol, dialog ul { padding-left: 20px; }
 <div class="wrap">
   <header class="top">
     <div class="brand">
+      <!--HOME-->
       <h1>Detective <span>Redwing</span></h1>
       <div class="meta" id="meta"></div>
     </div>

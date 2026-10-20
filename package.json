@@ -1,5 +1,5 @@
 {
-  "name": "detective-redwing",
+  "name": "brainbrew",
   "private": true,
   "scripts": {
     "build": "node build.js",
