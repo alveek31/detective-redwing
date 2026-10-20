@@ -1,0 +1,459 @@
+<title>Detective Redwing</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&family=Libre+Franklin:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one narrow case-file column; dossier, evidence, notebook, accusation stacked in reading order. */
+:root {
+  --paper: #ECEEE8; --card: #F7F8F3; --ink: #1D2330; --muted: #5C6470; --line: #C7CCC2;
+  --accent: #8B1E2D; --accent-ink: #FFFFFF; --brass: #8A6A2C; --good: #2F6B45; --seal: #E3D7C6;
+  --display: "IM Fell English", "Iowan Old Style", Georgia, serif;
+  --display-sc: "IM Fell English SC", "IM Fell English", Georgia, serif;
+  --body: "Libre Franklin", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #13161C; --card: #1A1E26; --ink: #E5E3DB; --muted: #959BA6; --line: #2E343F;
+  --accent: #D9566A; --accent-ink: #16090C; --brass: #CDA75F; --good: #6CC08B; --seal: #2A2620; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --paper: #13161C; --card: #1A1E26; --ink: #E5E3DB; --muted: #959BA6; --line: #2E343F;
+  --accent: #D9566A; --accent-ink: #16090C; --brass: #CDA75F; --good: #6CC08B; --seal: #2A2620; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--paper); color: var(--ink); font: 15px/1.55 var(--body); }
+.wrap { max-width: 760px; margin: 0 auto; padding-block: 20px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 28px; }
+header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  border-bottom: 2px solid var(--ink); padding-bottom: 12px; }
+.brand { display: flex; flex-direction: column; }
+.brand h1 { font: 400 clamp(30px, 6vw, 44px)/1 var(--display-sc); margin: 0; letter-spacing: .01em; }
+.brand h1 span { color: var(--accent); }
+.meta { font: 500 12px/1.4 var(--mono); color: var(--muted); letter-spacing: .06em; text-transform: uppercase; margin-top: 6px; }
+nav.tools { display: flex; gap: 6px; flex-wrap: wrap; }
+button { font: inherit; color: inherit; cursor: pointer; }
+.btn { border: 1px solid var(--line); background: var(--card); padding: 7px 12px; border-radius: 4px; font: 500 13px var(--body); }
+.btn:hover { border-color: var(--ink); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; padding: 11px 20px; font-size: 15px; }
+.btn.primary:disabled { opacity: .45; cursor: not-allowed; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+h2 { font: 400 24px/1.15 var(--display); margin: 0 0 4px; text-wrap: balance; }
+.label { font: 500 11px/1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+section { display: flex; flex-direction: column; gap: 12px; }
+
+.brief { font: italic 400 19px/1.5 var(--display); max-width: 62ch; margin: 0; }
+.scene { border-left: 3px solid var(--accent); padding: 6px 0 6px 14px; font-weight: 600; }
+
+.dossier { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 620px) { .dossier { grid-template-columns: 1fr; } }
+.dossier ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.dossier li { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 6px 0; border-bottom: 1px dashed var(--line); }
+.dossier li b { font-weight: 600; }
+.dossier li small { display: block; color: var(--muted); font-size: 12px; }
+.tags { font: 400 11px var(--mono); color: var(--brass); text-align: right; white-space: nowrap; }
+
+.clues { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; counter-reset: c; }
+.clues li { display: grid; grid-template-columns: 42px 1fr; gap: 10px; align-items: start; padding: 10px 12px; background: var(--card); border: 1px solid var(--line); border-radius: 3px; }
+.clues li::before { counter-increment: c; content: "No." counter(c); font: 500 11px/1.9 var(--mono); color: var(--muted); }
+.code { display: block; font: 500 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--brass); margin-bottom: 2px; }
+.ciph { font-family: var(--mono); font-size: 14px; letter-spacing: .02em; }
+.decoded { display: block; color: var(--muted); font-size: 13px; margin-top: 4px; }
+.clues.hints li::before { content: "Hint " counter(c); }
+.clues.hints li { grid-template-columns: 52px 1fr; }
+.clues li.sealed { background: var(--seal); border-style: dashed; color: var(--muted); font-style: italic; }
+.clues li.fresh { animation: unseal .7s ease-out; }
+@keyframes unseal { from { background: var(--accent); color: var(--accent-ink); } }
+
+.nb-scroll { overflow-x: auto; }
+.nb { border-collapse: collapse; font-size: 12px; margin: 0 auto; }
+.nb th, .nb td { border: 1px solid var(--line); }
+.nb thead th { height: 112px; vertical-align: bottom; padding: 4px 0; width: 34px; }
+.nb thead th div { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; font-weight: 600; margin: 0 auto; }
+.nb tbody th { text-align: right; padding: 0 8px; white-space: nowrap; font-weight: 600; }
+.nb td { width: 34px; height: 34px; padding: 0; background: var(--card); }
+.nb td.void { background: transparent; border: none; }
+.nb td button { width: 100%; height: 100%; border: 0; background: transparent; font: 600 16px var(--mono); }
+.nb td button.x { color: var(--muted); }
+.nb td button.o { color: var(--good); }
+.nb .groupL { border-left: 2px solid var(--ink); }
+.nb .groupT { border-top: 2px solid var(--ink); }
+.hint { color: var(--muted); font-size: 13px; margin: 0; }
+
+.accuse { background: var(--card); border: 1px solid var(--ink); padding: 18px; border-radius: 4px; display: flex; flex-direction: column; gap: 14px; }
+.pickrow { display: flex; flex-direction: column; gap: 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: var(--paper); padding: 6px 10px; border-radius: 999px; font-size: 13px; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.pips { display: flex; gap: 6px; align-items: center; }
+.pip { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--ink); }
+.pip.used { background: var(--accent); border-color: var(--accent); }
+.history { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.history li { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.score { font: 500 13px var(--mono); white-space: nowrap; }
+.score.hit { color: var(--good); }
+
+.verdict { border: 2px solid var(--accent); padding: 20px; border-radius: 4px; display: flex; flex-direction: column; gap: 12px; }
+.verdict.won { border-color: var(--good); }
+.verdict h2 { font-size: 30px; }
+.stamp { align-self: flex-start; font: 600 13px var(--mono); letter-spacing: .08em; text-transform: uppercase; padding: 6px 10px; border: 2px solid var(--accent); color: var(--accent); transform: rotate(-1.5deg); }
+.verdict.won .stamp { border-color: var(--good); color: var(--good); }
+.walk { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.share { font: 400 14px/1.5 var(--mono); background: var(--paper); border: 1px dashed var(--line); padding: 10px 12px; white-space: pre-wrap; margin: 0; }
+.sol { border-collapse: collapse; width: 100%; font-size: 14px; }
+.sol td, .sol th { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.sol tr.killer { color: var(--accent); font-weight: 600; }
+
+dialog { border: 1px solid var(--ink); background: var(--card); color: var(--ink); max-width: min(520px, calc(100vw - 32px)); padding: 22px; border-radius: 4px; }
+dialog::backdrop { background: rgba(10, 12, 16, .55); }
+dialog ol, dialog ul { padding-left: 20px; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center; font-variant-numeric: tabular-nums; }
+.stats b { display: block; font: 400 28px var(--display); }
+.bars { display: flex; flex-direction: column; gap: 4px; font: 12px var(--mono); }
+.bar { display: flex; gap: 6px; align-items: center; }
+.bar i { display: block; height: 16px; background: var(--ink); min-width: 4px; }
+.archive { display: flex; flex-direction: column; gap: 6px; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--paper); padding: 8px 14px; border-radius: 4px; font-size: 14px; }
+@media (prefers-reduced-motion: reduce) { .clues li.fresh { animation: none; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>Detective <span>Redwing</span></h1>
+      <div class="meta" id="meta"></div>
+    </div>
+    <nav class="tools">
+      <button class="btn" id="btnHow">How to play</button>
+      <button class="btn" id="btnCases">Case files</button>
+      <button class="btn" id="btnStats">Record</button>
+    </nav>
+  </header>
+
+  <section>
+    <p class="brief" id="brief"></p>
+    <div class="scene" id="scene"></div>
+  </section>
+
+  <section>
+    <div><span class="label">The dossier</span><h2>Who, with what, and where</h2></div>
+    <div class="dossier" id="dossier"></div>
+    <p class="hint">Each of the five guests held exactly one item and spent the evening in exactly one room. No two guests shared either.</p>
+  </section>
+
+  <section>
+    <div><span class="label">Evidence</span><h2>What the household told you</h2></div>
+    <ol class="clues" id="clues"></ol>
+    <p class="hint">Some evidence arrives in code: an anagram to unscramble, a bit of trivia to place, or a note with every letter shifted. This evidence is enough to name the killer with certainty. Each wrong accusation unseals one extra hint below.</p>
+    <ol class="clues hints" id="hints"></ol>
+  </section>
+
+  <section>
+    <div><span class="label">Your notebook</span><h2>Cross off the impossible</h2></div>
+    <p class="hint">Tap a square once for ✗, twice for ✓, three times to clear.</p>
+    <div class="nb-scroll"><table class="nb" id="nb"></table></div>
+  </section>
+
+  <section id="playArea">
+    <div class="accuse" id="accuse">
+      <div><span class="label">Accusation</span><h2>Name the killer</h2></div>
+      <div class="pickrow"><span class="label">Suspect</span><div class="chips" id="pickS"></div></div>
+      <div class="pickrow"><span class="label">Weapon</span><div class="chips" id="pickW"></div></div>
+      <div class="pickrow"><span class="label">Location</span><div class="chips" id="pickL"></div></div>
+      <div class="actions">
+        <div class="pips" id="pips" aria-label="Attempts used"></div>
+        <button class="btn primary" id="btnAccuse" disabled>Make accusation</button>
+      </div>
+      <ul class="history" id="history"></ul>
+    </div>
+    <div id="verdict" hidden></div>
+  </section>
+</div>
+
+<dialog id="dlgHow">
+  <h2>How to play</h2>
+  <p>Every day there is one new murder at Redwing Manor. Five guests, five items, five rooms. One guest is the killer.</p>
+  <ol>
+    <li>Read the scene and the evidence. Use the dossier: height, handedness, how heavy an item is, and whether a room is indoors.</li>
+    <li>Crack the coded evidence. Anagrams hide a surname, trivia points to one item or room, and coded notes have every letter moved 3 along the alphabet (so D means A).</li>
+    <li>Mark your notebook. Each guest pairs with exactly one item and one room.</li>
+    <li>Accuse a suspect, weapon and location. You have 6 accusations.</li>
+    <li>A wrong accusation tells you nothing except that you were wrong, and unseals a hint.</li>
+  </ol>
+  <p>The opening evidence is always enough: pure logic reaches exactly one answer before any hint. A sharp detective solves it in one.</p>
+  <form method="dialog"><button class="btn">Got it</button></form>
+</dialog>
+
+<dialog id="dlgStats">
+  <h2>Your record</h2>
+  <div class="stats" id="stats"></div>
+  <p class="label" style="margin-top:16px">Solved on accusation</p>
+  <div class="bars" id="bars"></div>
+  <form method="dialog" style="margin-top:16px"><button class="btn">Close</button></form>
+</dialog>
+
+<dialog id="dlgCases">
+  <h2>Case files</h2>
+  <p class="hint">Missed a day? Earlier cases stay open. Practice cases do not count toward your record.</p>
+  <div class="archive" id="archive"></div>
+  <form method="dialog" style="margin-top:16px"><button class="btn">Close</button></form>
+</dialog>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/*ENGINE*/
+</script>
+<script>
+(function () {
+  var LAUNCH = "2026-10-20";
+  var $ = function (id) { return document.getElementById(id); };
+  function store(k, v) { try { if (v === undefined) return JSON.parse(localStorage.getItem(k)); localStorage.setItem(k, JSON.stringify(v)); } catch (e) { return null; } }
+  function ymd(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+  function caseNo(date) { return Math.round((new Date(date + "T12:00:00") - new Date(LAUNCH + "T12:00:00")) / 864e5) + 1; }
+  function el(tag, attrs, kids) {
+    var e = document.createElement(tag);
+    for (var k in attrs || {}) { if (k === "text") e.textContent = attrs[k]; else if (k === "class") e.className = attrs[k]; else e.setAttribute(k, attrs[k]); }
+    (kids || []).forEach(function (c) { e.appendChild(c); });
+    return e;
+  }
+
+  var today = ymd(new Date());
+  var current = null, C = null, state = null, pick = { s: null, w: null, l: null }, freshIdx = -1;
+
+  function load(id) {
+    current = id;
+    C = Redwing.generate(id.kind === "daily" ? "daily-" + id.date : "practice-" + id.code);
+    state = store("rw2:case:" + key()) || { guesses: [], notes: {}, done: false, won: false };
+    pick = { s: null, w: null, l: null };
+    render();
+  }
+  function key() { return current.kind === "daily" ? current.date : "p-" + current.code; }
+  function save() { store("rw2:case:" + key(), state); }
+  function hintsOpen() { return state.done ? C.hints.length : Math.min(C.hints.length, state.guesses.length); }
+
+  function render() {
+    var S = C.suspects, W = C.weapons, L = C.locations;
+    $("meta").textContent = current.kind === "daily"
+      ? "Case No. " + caseNo(current.date) + " · " + new Date(current.date + "T12:00:00").toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long", year: "numeric" })
+      : "Practice case " + current.code;
+    $("brief").textContent = C.victim + " was found dead at Redwing Manor. Five guests stayed the night: " +
+      S.map(function (s) { return s.name; }).join(", ").replace(/, ([^,]*)$/, " and $1") + ". Each had one item and kept to one room. One of them is lying.";
+    $("scene").textContent = C.murderClue;
+
+    // Dossier
+    var d = $("dossier"); d.innerHTML = "";
+    function col(title, items, row) {
+      var ul = el("ul");
+      items.forEach(function (it) { ul.appendChild(row(it)); });
+      return el("div", {}, [el("div", { class: "label", text: title }), ul]);
+    }
+    d.appendChild(col("Suspects", S, function (s) {
+      var li = el("li"); var left = el("div");
+      left.appendChild(el("b", { text: s.name })); left.appendChild(el("small", { text: s.role }));
+      li.appendChild(left); li.appendChild(el("span", { class: "tags", text: (s.tall ? "Tall" : "Short") + " · " + (s.left ? "Left" : "Right") + "-handed" }));
+      return li;
+    }));
+    d.appendChild(col("Weapons", W, function (w) {
+      return el("li", {}, [el("b", { text: w.name }), el("span", { class: "tags", text: w.heavy ? "Heavy" : "Light" })]);
+    }));
+    d.appendChild(col("Locations", L, function (l) {
+      return el("li", {}, [el("b", { text: l.name }), el("span", { class: "tags", text: l.outdoor ? "Outdoors" : "Indoors" })]);
+    }));
+
+    // Clues
+    var ol = $("clues"); ol.innerHTML = "";
+    C.clues.forEach(function (c) {
+      var body = el("span");
+      if (c.code) body.appendChild(el("span", { class: "code", text: c.code === "Cipher" ? "Coded note · shift each letter back 3" : c.code }));
+      body.appendChild(el("span", { class: c.code === "Cipher" ? "ciph" : "", text: c.text }));
+      if (c.code && state.done) body.appendChild(el("span", { class: "decoded", text: "Decoded: " + c.plain }));
+      ol.appendChild(el("li", {}, [body]));
+    });
+    var hl = $("hints"); hl.innerHTML = "";
+    var n = hintsOpen();
+    C.hints.forEach(function (c, i) {
+      var li = el("li", { class: i < n ? (i === freshIdx ? "fresh" : "") : "sealed" });
+      li.appendChild(el("span", { text: i < n ? c.text.replace(/^Hint: /, "") : "Sealed. A wrong accusation unseals this." }));
+      hl.appendChild(li);
+    });
+    freshIdx = -1;
+
+    renderNotebook();
+    renderPicker();
+    renderVerdict();
+  }
+
+  function renderNotebook() {
+    var S = C.suspects, W = C.weapons, L = C.locations, t = $("nb"); t.innerHTML = "";
+    var head = el("tr", {}, [el("th")]);
+    W.concat(L).forEach(function (x, i) { head.appendChild(el("th", { class: i === W.length ? "groupL" : "" }, [el("div", { text: x.name })])); });
+    t.appendChild(el("thead", {}, [head]));
+    var body = el("tbody");
+    function cell(id, cls) {
+      var v = state.notes[id] || 0;
+      var b = el("button", { class: v === 1 ? "x" : v === 2 ? "o" : "", "aria-label": id, text: v === 1 ? "✗" : v === 2 ? "✓" : "" });
+      b.addEventListener("click", function () { state.notes[id] = ((state.notes[id] || 0) + 1) % 3; save(); renderNotebook(); });
+      return el("td", { class: cls || "" }, [b]);
+    }
+    S.forEach(function (s, i) {
+      var tr = el("tr", {}, [el("th", { text: s.name })]);
+      W.forEach(function (_, j) { tr.appendChild(cell("s" + i + "w" + j)); });
+      L.forEach(function (_, j) { tr.appendChild(cell("s" + i + "l" + j, j === 0 ? "groupL" : "")); });
+      body.appendChild(tr);
+    });
+    L.forEach(function (l, k) {
+      var tr = el("tr", {}, [el("th", { class: k === 0 ? "groupT" : "", text: l.name })]);
+      W.forEach(function (_, j) { tr.appendChild(cell("l" + k + "w" + j, k === 0 ? "groupT" : "")); });
+      L.forEach(function (_, j) { tr.appendChild(el("td", { class: "void" })); });
+      body.appendChild(tr);
+    });
+    t.appendChild(body);
+  }
+
+  function renderPicker() {
+    $("accuse").hidden = state.done;
+    [["pickS", "s", C.suspects], ["pickW", "w", C.weapons], ["pickL", "l", C.locations]].forEach(function (g) {
+      var box = $(g[0]); box.innerHTML = "";
+      g[2].forEach(function (x, i) {
+        var b = el("button", { class: "chip", "aria-pressed": pick[g[1]] === i ? "true" : "false", text: x.name });
+        b.addEventListener("click", function () { pick[g[1]] = i; renderPicker(); });
+        box.appendChild(b);
+      });
+    });
+    var p = $("pips"); p.innerHTML = "";
+    for (var i = 0; i < C.attempts; i++) p.appendChild(el("span", { class: "pip" + (i < state.guesses.length ? " used" : "") }));
+    p.appendChild(el("span", { class: "label", text: (C.attempts - state.guesses.length) + " left" }));
+    $("btnAccuse").disabled = pick.s === null || pick.w === null || pick.l === null;
+    var h = $("history"); h.innerHTML = "";
+    state.guesses.forEach(function (g, i) {
+      var sc = el("span", { class: "score" + (g.hits === 3 ? " hit" : ""), text: g.hits === 3 ? "✓ Correct" : "✗ Wrong" });
+      h.appendChild(el("li", {}, [el("span", { text: (i + 1) + ". " + C.suspects[g.s].name + ", " + C.weapons[g.w].name + ", " + C.locations[g.l].name }), sc]));
+    });
+  }
+
+  function accuse() {
+    if (state.done) return;
+    var a = C.answer;
+    var hits = (pick.s === a.s) + (pick.w === a.w) + (pick.l === a.l);
+    state.guesses.push({ s: pick.s, w: pick.w, l: pick.l, hits: hits });
+    if (hits === 3) { state.done = true; state.won = true; }
+    else if (state.guesses.length >= C.attempts) { state.done = true; }
+    else {
+      var idx = state.guesses.length - 1;
+      if (idx < C.hints.length) freshIdx = idx;
+      toast("Wrong. " + (idx < C.hints.length ? "A hint has been unsealed." : "No hints left."));
+    }
+    save();
+    if (state.done) recordResult();
+    pick = { s: null, w: null, l: null };
+    render();
+    if (state.done) $("verdict").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function recordResult() {
+    if (current.kind !== "daily") return;
+    var st = store("rw2:stats") || { played: 0, won: 0, streak: 0, best: 0, dist: [0, 0, 0, 0, 0, 0], last: null, lastWin: null };
+    if (st.last === current.date) return;
+    st.played++; st.last = current.date;
+    if (state.won) {
+      st.won++; st.dist[state.guesses.length - 1]++;
+      var prev = new Date(current.date + "T12:00:00"); prev.setDate(prev.getDate() - 1);
+      st.streak = st.lastWin === ymd(prev) ? st.streak + 1 : 1;
+      st.lastWin = current.date; st.best = Math.max(st.best, st.streak);
+    } else st.streak = 0;
+    store("rw2:stats", st);
+  }
+
+  function shareText() {
+    var row = state.guesses.map(function (g) { return g.hits === 3 ? "🟩" : "🟥"; }).join("");
+    var head = "🕵️ Detective Redwing " + (current.kind === "daily" ? "#" + caseNo(current.date) : "practice") + " " + (state.won ? state.guesses.length : "X") + "/" + C.attempts;
+    return head + "\n" + row;
+  }
+
+  function renderVerdict() {
+    var v = $("verdict");
+    v.hidden = !state.done; v.innerHTML = "";
+    if (!state.done) return;
+    var a = C.answer, S = C.suspects, W = C.weapons, L = C.locations;
+    v.className = "verdict" + (state.won ? " won" : "");
+    v.appendChild(el("div", { class: "stamp", text: state.won ? "✓ Correct · Case closed" : "✗ Case gone cold" }));
+    v.appendChild(el("h2", { text: S[a.s].name + ", with the " + W[a.w].name + ", in the " + L[a.l].name + "." }));
+    v.appendChild(el("p", { text: state.won ? "You named the killer, the weapon and the room. Solved on accusation " + state.guesses.length + " of " + C.attempts + (state.guesses.length === 1 ? ", by pure deduction." : ".") : "Six accusations and no confession. Here is the answer, and how logic gets there." }));
+    v.appendChild(el("span", { class: "label", text: "How the evidence proves it" }));
+    var wl = el("ol", { class: "walk" });
+    function factText(f) {
+      var m = f.match(/^([wl])(\d+):(\d+)$/), who = S[+m[2]].name;
+      return m[1] === "w" ? who + " had the " + W[+m[3]].name : who + " was in the " + L[+m[3]].name;
+    }
+    C.steps.forEach(function (st, i) {
+      var t = "Evidence No." + (i + 1) + ": " + (st.facts.length ? "so " + st.facts.map(factText).join("; ") + ". " : "") +
+        (st.left === 1 ? "Only one answer is left." : st.left + " possible answers remain.");
+      wl.appendChild(el("li", { text: t }));
+    });
+    wl.appendChild(el("li", { text: "With the scene (" + C.murderClue.replace(/\.$/, "") + "), that answer is " + S[a.s].name + " with the " + W[a.w].name + " in the " + L[a.l].name + "." }));
+    v.appendChild(wl);
+    var tb = el("table", { class: "sol" });
+    tb.appendChild(el("tr", {}, [el("th", { text: "Guest" }), el("th", { text: "Item" }), el("th", { text: "Room" })]));
+    S.forEach(function (s, i) {
+      tb.appendChild(el("tr", { class: i === a.s ? "killer" : "" }, [el("td", { text: s.name }), el("td", { text: W[C.solution.w[i]].name }), el("td", { text: L[C.solution.l[i]].name })]));
+    });
+    v.appendChild(tb);
+    var pre = el("pre", { class: "share", text: shareText() });
+    v.appendChild(pre);
+    var row = el("div", { class: "actions" });
+    var copy = el("button", { class: "btn primary", text: "Copy result" });
+    copy.addEventListener("click", function () {
+      var txt = shareText();
+      try {
+        navigator.clipboard.writeText(txt).then(function () { toast("Copied. Paste it anywhere."); }, function () { selectPre(pre); });
+      } catch (e) { selectPre(pre); }
+    });
+    row.appendChild(copy);
+    if (current.kind === "daily" && current.date === today) row.appendChild(el("span", { class: "hint", text: "A new case opens at midnight." }));
+    v.appendChild(row);
+  }
+  function selectPre(pre) { var r = document.createRange(); r.selectNodeContents(pre); var s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("Press copy to grab the selected result."); }
+
+  var tt;
+  function toast(msg) { var t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(tt); tt = setTimeout(function () { t.hidden = true; }, 2600); }
+
+  function openStats() {
+    var st = store("rw2:stats") || { played: 0, won: 0, streak: 0, best: 0, dist: [0, 0, 0, 0, 0, 0] };
+    var s = $("stats"); s.innerHTML = "";
+    [["Played", st.played], ["Solved %", st.played ? Math.round(100 * st.won / st.played) : 0], ["Streak", st.streak], ["Best", st.best]].forEach(function (p) {
+      var d = el("div"); d.appendChild(el("b", { text: String(p[1]) })); d.appendChild(el("span", { class: "label", text: p[0] })); s.appendChild(d);
+    });
+    var b = $("bars"); b.innerHTML = ""; var mx = Math.max.apply(null, st.dist.concat([1]));
+    st.dist.forEach(function (n, i) {
+      var bar = el("i"); bar.style.width = (n / mx * 80) + "%";
+      b.appendChild(el("div", { class: "bar" }, [el("span", { text: String(i + 1) }), bar, el("span", { text: String(n) })]));
+    });
+    $("dlgStats").showModal();
+  }
+  function openCases() {
+    var a = $("archive"); a.innerHTML = "";
+    for (var i = 0; i < 7; i++) {
+      var d = new Date(); d.setDate(d.getDate() - i); var date = ymd(d);
+      if (caseNo(date) < 1) break;
+      var st = store("rw2:case:" + date);
+      var mark = st && st.done ? (st.won ? " · solved in " + st.guesses.length : " · unsolved") : st && st.guesses.length ? " · in progress" : "";
+      (function (date) {
+        var b = el("button", { class: "btn", text: "Case No. " + caseNo(date) + (i === 0 ? " (today)" : " · " + date) + mark });
+        b.addEventListener("click", function () { $("dlgCases").close(); load({ kind: "daily", date: date }); scrollTo(0, 0); });
+        a.appendChild(b);
+      })(date);
+    }
+    var pr = el("button", { class: "btn", text: "Open a random practice case" });
+    pr.addEventListener("click", function () { $("dlgCases").close(); load({ kind: "practice", code: Math.random().toString(36).slice(2, 7).toUpperCase() }); scrollTo(0, 0); });
+    a.appendChild(pr);
+    $("dlgCases").showModal();
+  }
+
+  $("btnAccuse").addEventListener("click", accuse);
+  $("btnHow").addEventListener("click", function () { $("dlgHow").showModal(); });
+  $("btnStats").addEventListener("click", openStats);
+  $("btnCases").addEventListener("click", openCases);
+
+  load({ kind: "daily", date: today });
+})();
+</script>
