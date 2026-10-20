@@ -52,6 +52,21 @@ var Redwing = (function () {
     "Boathouse": "building where rowers keep their eights",
     "Orchard": "place Newton is said to have watched an apple fall"
   };
+  // Word locks: name what the three things are all types of, to open a bonus clue.
+  var LOCKS = [
+    { items: "Redwing, Red Baron and Sturon", answers: ["onion", "onions"] },
+    { items: "Bramley, Cox and Granny Smith", answers: ["apple", "apples"] },
+    { items: "Maris Piper, King Edward and Charlotte", answers: ["potato", "potatoes"] },
+    { items: "Darjeeling, Assam and Oolong", answers: ["tea", "teas"] },
+    { items: "Stilton, Wensleydale and Cheddar", answers: ["cheese", "cheeses"] },
+    { items: "Beagle, Basset and Bloodhound", answers: ["dog", "dogs", "hound", "hounds"] },
+    { items: "Arabica, Robusta and Liberica", answers: ["coffee", "coffee bean", "coffee beans"] },
+    { items: "Merlot, Shiraz and Malbec", answers: ["grape", "grapes", "wine", "wines", "red wine"] },
+    { items: "Cirrus, Cumulus and Nimbus", answers: ["cloud", "clouds"] },
+    { items: "Penny Black, Penny Red and Inverted Jenny", answers: ["stamp", "stamps", "postage stamp"] },
+    { items: "Sirloin, Ribeye and Rump", answers: ["steak", "steaks", "beef"] },
+    { items: "Fedora, Bowler and Deerstalker", answers: ["hat", "hats"] }
+  ];
   var SIZE = 5;
   var ATTEMPTS = 6;
 
@@ -138,7 +153,16 @@ var Redwing = (function () {
         if (holder !== m) add("The " + W[wj].name + " turned up in the " + L[lk].name + ".", f, "pos");
       } else add(pick(negWL, rng)(W[wj].name, L[lk].name), f, "neg");
     })(wj, lk);
-    // attribute clues
+    // "either A or B" clues: one of the two named guests is the true one
+    for (var e = 0; e < SIZE; e++) (function (e) {
+      var o = (e + 1 + Math.floor(rng() * (SIZE - 1))) % SIZE;
+      var pair = rng() < 0.5 ? [e, o] : [o, e];
+      var we = w[e], le = l[e];
+      add("Either " + S[pair[0]].name + " or " + S[pair[1]].name + " had the " + W[we].name + ".",
+        function (a) { return a.w[e] === we || a.w[o] === we; }, "or");
+      add("The " + L[le].name + " was occupied by either " + S[pair[0]].name + " or " + S[pair[1]].name + ".",
+        function (a) { return a.l[e] === le || a.l[o] === le; }, "or");
+    })(e);
     for (var s = 0; s < SIZE; s++) (function (s) {
       var out = L[l[s]].outdoor;
       add(S[s].name + "'s shoes were " + (out ? "caked in mud, so they were outdoors" : "spotless, so they stayed indoors") + ".",
@@ -227,41 +251,91 @@ var Redwing = (function () {
     });
   }
   function cap(t) { return t.charAt(0).toUpperCase() + t.slice(1); }
-  // Rewrite up to three core clues as puzzles: an anagrammed suspect, a trivia-coded item or room, a shifted-letter note.
-  function encodeCryptic(clues, S, W, L, rng) {
+  var MORSE = { A: ".-", B: "-...", C: "-.-.", D: "-..", E: ".", F: "..-.", G: "--.", H: "....", I: "..", J: ".---", K: "-.-", L: ".-..", M: "--",
+    N: "-.", O: "---", P: ".--.", Q: "--.-", R: ".-.", S: "...", T: "-", U: "..-", V: "...-", W: ".--", X: "-..-", Y: "-.--", Z: "--.." };
+  function atbash(text) {
+    return text.replace(/[A-Za-z]/g, function (ch) {
+      var base = ch <= "Z" ? 65 : 97;
+      return String.fromCharCode(25 - (ch.charCodeAt(0) - base) + base);
+    });
+  }
+  // Ways to disguise one name inside a clue. Each returns the replacement phrase and the label shown to players.
+  var NAME_CODES = {
+    anagram: function (word, cat, rng) { return { phrase: cat + " is an anagram of " + anagram(word, rng), label: "Anagram" }; },
+    numbers: function (word, cat) {
+      return { phrase: cat + " spells " + word.split("").map(function (ch) { return ch.charCodeAt(0) - 64; }).join("-"), label: "Number code · A=1, B=2 … Z=26" };
+    },
+    morse: function (word, cat) { return { phrase: cat + " is " + word.split("").map(function (ch) { return MORSE[ch]; }).join(" "), label: "Morse code" }; },
+    mirror: function (word, cat) { return { phrase: cat + " reads " + word.split("").reverse().join("") + " backwards", label: "Mirror writing" }; }
+  };
+  var NOTE_CODES = {
+    caesar: function (text, rng) { var k = 2 + Math.floor(rng() * 6); return { text: caesar(text, k), label: "Coded note · shift each letter back " + k }; },
+    atbash: function (text) { return { text: atbash(text), label: "Coded note · mirrored alphabet: A↔Z, B↔Y, C↔X …" }; },
+    reverse: function (text) { return { text: text.split("").reverse().join(""), label: "Coded note · read it backwards" }; }
+  };
+  // One theme per weekday (0 = Sunday), so each day of the week plays differently.
+  var THEMES = [
+    { name: "Grand Sunday", codes: ["morse", "trivia", "anagram", "caesar"] },
+    { name: "Gentle Monday", codes: ["trivia"] },
+    { name: "Scrambled Tuesday", codes: ["anagram", "caesar"] },
+    { name: "Numbers Wednesday", codes: ["numbers", "atbash"] },
+    { name: "Looking-glass Thursday", codes: ["mirror", "trivia", "reverse"] },
+    { name: "Telegraph Friday", codes: ["morse", "trivia", "caesar"] },
+    { name: "Puzzler's Saturday", codes: ["anagram", "numbers", "trivia", "atbash"] }
+  ];
+  function letters(name) { return name.toUpperCase().replace(/[^A-Z]/g, ""); }
+  // Find a name in the clue that a code can replace. Suspects use their surname; items and rooms need "the X".
+  function findName(c, S, W, L, code) {
+    if (code !== "trivia") {
+      var s = S.filter(function (x) { return c.text.indexOf(x.name) >= 0 && c.text.indexOf(x.name + "'s") < 0; })[0];
+      if (s) return { from: s.name, word: letters(s.name.split(" ").pop()), cat: "the guest whose surname", the: false, name: s.name };
+    }
+    var groups = [[W, "the weapon whose name"], [L, "the place whose name"]];
+    for (var g = 0; g < groups.length; g++) {
+      var e = groups[g][0].filter(function (x) { return c.text.indexOf("the " + x.name) >= 0 || c.text.indexOf("The " + x.name) >= 0; })[0];
+      if (e) return { from: e.name, word: letters(e.name), cat: groups[g][1], the: true, name: e.name };
+    }
+    return null;
+  }
+  function swapName(text, hit, phrase) {
+    if (hit.the) {
+      var bare = phrase.replace(/^the /, "");
+      return text.replace("the " + hit.from, "the " + bare).replace("The " + hit.from, "The " + bare);
+    }
+    var at = text.indexOf(hit.from), out = text.replace(hit.from, phrase);
+    return at === 0 ? cap(out) : out;
+  }
+  // Rewrite core clues as puzzles following the day's theme: one code per clue, never two on the same clue.
+  function encodeCryptic(clues, S, W, L, rng, theme) {
     var out = clues.map(function (c) { return { text: c.text, plain: c.text, kind: c.kind, f: c.f, code: null }; });
-    var order = shuffle(out.map(function (_, i) { return i; }), rng);
-    var done = {};
-    order.forEach(function (i) {
-      var c = out[i];
-      if (!done.anagram) {
-        var s = S.filter(function (x) { return c.text.indexOf(x.name) >= 0 && c.text.indexOf(x.name + "'s") < 0; })[0];
-        if (s) {
-          var sur = s.name.split(" ").pop().toUpperCase();
-          var phrase = "the guest whose surname is an anagram of " + anagram(sur, rng);
-          var at = c.text.indexOf(s.name);
-          c.text = c.text.replace(s.name, phrase);
-          if (at === 0) c.text = cap(c.text);
-          c.code = "Anagram"; done.anagram = true; return;
+    var free = shuffle(out.map(function (_, i) { return i; }), rng);
+    free = free.slice(0, Math.max(1, out.length - 2));  // always leave at least two plain clues
+    theme.codes.forEach(function (code) {
+      for (var n = 0; n < free.length; n++) {
+        var c = out[free[n]];
+        if (NOTE_CODES[code]) {
+          var r = NOTE_CODES[code](c.text, rng);
+          c.text = r.text; c.code = r.label; c.cipher = true;
+        } else {
+          var hit = findName(c, S, W, L, code);
+          if (!hit) continue;
+          var phrase = code === "trivia" ? "the " + TRIVIA[hit.name] : NAME_CODES[code](hit.word, hit.cat, rng).phrase;
+          c.text = swapName(c.text, hit, phrase);
+          c.code = code === "trivia" ? "Trivia" : NAME_CODES[code](hit.word, hit.cat, rng).label;
         }
-      }
-      if (!done.trivia) {
-        var e = W.concat(L).filter(function (x) { return c.text.indexOf("the " + x.name) >= 0 || c.text.indexOf("The " + x.name) >= 0; })[0];
-        if (e) {
-          c.text = c.text.replace("the " + e.name, "the " + TRIVIA[e.name]).replace("The " + e.name, "The " + TRIVIA[e.name]);
-          c.code = "Trivia"; done.trivia = true; return;
-        }
-      }
-      if (!done.cipher && rng() < 0.6) {
-        c.text = caesar(c.text, 3);
-        c.code = "Cipher"; done.cipher = true;
+        free.splice(n, 1);
+        return;
       }
     });
     return out;
   }
 
-  function generate(seed) {
+  function generate(seed, opts) {
     var rng = rngFrom(seed);
+    var dm = String(seed).match(/(\d{4})-(\d{2})-(\d{2})$/);
+    var weekday = opts && opts.weekday != null ? opts.weekday
+      : dm ? new Date(+dm[1], +dm[2] - 1, +dm[3]).getDay() : Math.floor(rng() * 7);
+    var theme = THEMES[weekday];
     for (var tries = 0; tries < 60; tries++) {
       var S, W, L;
       do { S = shuffle(SUSPECTS, rng).slice(0, SIZE); } while (!mixed(S, "tall") || !mixed(S, "left"));
@@ -274,7 +348,7 @@ var Redwing = (function () {
       var cand = buildCandidates(S, W, L, sol, m, rng);
       // Prefer indirect clues: attributes and negatives first, a few positives allowed.
       cand = shuffle(cand, rng).sort(function (x, y) {
-        var wt = { attr: 0, neg: 1, pos: 2 };
+        var wt = { attr: 0, or: 0.6, neg: 1, pos: 2 };
         return wt[x.kind] + rng() * 2.2 - (wt[y.kind] + rng() * 2.2);
       });
       var chosen = [], pool = ALL;
@@ -294,7 +368,7 @@ var Redwing = (function () {
       if (chosen.length < 5 || chosen.length > 9) continue;
       if (chosen.filter(function (c) { return c.kind === "pos"; }).length > 1) continue;
       chosen = shuffle(chosen, rng);
-      chosen = encodeCryptic(chosen, S, W, L, rng);
+      chosen = encodeCryptic(chosen, S, W, L, rng, theme);
       // Hints: extra clues unsealed by wrong accusations, weakest first, so the core set alone stays sufficient.
       var used = {}; chosen.forEach(function (c) { used[c.text] = true; });
       var spare = shuffle(cand.filter(function (c) { return !used[c.text]; }), rng);
@@ -305,6 +379,10 @@ var Redwing = (function () {
         { text: "Hint: the killer did not use the " + W[(sol.w[m] + 1) % SIZE].name + " and was not in the " + L[(sol.l[m] + 1) % SIZE].name + ".", kind: "hint" }
       ];
       hints = hints.concat([pick(strong, rng)]).slice(0, ATTEMPTS - 1);
+      // Bonus clue behind the word lock: a direct fact not already used.
+      var given = {}; chosen.concat(hints).forEach(function (c) { given[c.plain || c.text] = true; });
+      var bonus = spare.filter(function (c) { return !given[c.text] && (c.kind === "pos" || c.kind === "or"); })[0] || spare[0];
+      var lock = seed === "daily-2026-10-20" ? LOCKS[0] : pick(LOCKS, rng);
       // Walkthrough: after each core clue, which facts became certain.
       var steps = [], wp = ALL, known = {};
       chosen.forEach(function (c, ci) {
@@ -320,9 +398,11 @@ var Redwing = (function () {
         solution: sol, murderer: m,
         answer: { s: m, w: sol.w[m], l: sol.l[m] },
         murderClue: mc.text, murderType: mc.type,
-        clues: chosen.map(function (c) { return { text: c.text, plain: c.plain, code: c.code, kind: c.kind }; }),
+        theme: theme.name,
+        clues: chosen.map(function (c) { return { text: c.text, plain: c.plain, code: c.code, cipher: !!c.cipher, kind: c.kind }; }),
         hints: hints.map(function (c) { return { text: c.text, kind: c.kind }; }),
         steps: steps,
+        lock: { question: lock.items + " are all types of what?", answers: lock.answers, bonus: bonus.text },
         attempts: ATTEMPTS,
         _check: function () { return answers(chosen, mc); },
         _checkPrefix: function (k) { return answers(chosen.slice(0, k), mc); }
