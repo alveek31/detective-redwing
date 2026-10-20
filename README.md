@@ -17,4 +17,4 @@ Each weekday has its own code theme (see `THEMES` in `src/engine.js`): anagrams,
 
 ## Player tracking
 
-Visits are counted with Cloudflare Web Analytics (token in `package.json` under `config.cloudflareBeacon`), visible only to the site owner. The game also calls `track()` for starts, solves and failures; it does nothing until an event tool such as GoatCounter is added via `config.goatcounter`.
+Visits are counted with Cloudflare Web Analytics (token in `package.json` under `config.cloudflareBeacon`), visible only to the site owner. The game also reports starts, solves and failures (case number, tries and theme only) to a small Cloudflare Worker in `stats/`, which shows a private dashboard of players, solve rate and tries per day and per weekday theme. It is off until `config.statsUrl` is set; setup steps are in `stats/README.md`.

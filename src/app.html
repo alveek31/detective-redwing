@@ -423,18 +423,23 @@ dialog ol, dialog ul { padding-left: 20px; }
     });
   }
 
-  // Anonymous play counts for the live site (GoatCounter, no cookies). Does nothing where the counter script is absent.
-  function track(name) {
-    try { if (window.goatcounter && window.goatcounter.count) window.goatcounter.count({ path: name, title: name, event: true }); } catch (e) {}
+  // Anonymous play counts for the live site: case number, start/solve/fail, tries and theme only, no cookies.
+  // Sent to the Brainbrew stats Worker (package.json config.statsUrl); does nothing where that is not set.
+  function track(kind, tries) {
+    try {
+      if (!window.BB_STATS || current.kind !== "daily") return;
+      var body = JSON.stringify({ c: caseNo(current.date), k: kind, n: tries || null, th: C.theme });
+      if (!(navigator.sendBeacon && navigator.sendBeacon(window.BB_STATS, new Blob([body], { type: "text/plain" }))))
+        fetch(window.BB_STATS, { method: "POST", body: body, keepalive: true }).catch(function () {});
+    } catch (e) {}
   }
-  function caseTag() { return current.kind === "daily" ? "case-" + caseNo(current.date) : "practice"; }
 
   function accuse() {
     if (state.done) return;
     var a = C.answer;
     var hits = (pick.s === a.s) + (pick.w === a.w) + (pick.l === a.l);
     state.guesses.push({ s: pick.s, w: pick.w, l: pick.l, hits: hits });
-    if (state.guesses.length === 1) track("started/" + caseTag());
+    if (state.guesses.length === 1) track("start");
     if (hits === 3) { state.done = true; state.won = true; }
     else if (state.guesses.length >= C.attempts) { state.done = true; }
     else {
@@ -443,7 +448,7 @@ dialog ol, dialog ul { padding-left: 20px; }
       toast("Wrong. " + (idx < C.hints.length ? "A hint has been unsealed." : "No hints left."));
     }
     save();
-    if (state.done) { recordResult(); track((state.won ? "solved/" : "failed/") + caseTag() + (state.won ? "/in-" + state.guesses.length : "")); }
+    if (state.done) { recordResult(); track(state.won ? "solve" : "fail", state.guesses.length); }
     pick = { s: null, w: null, l: null };
     render();
     if (state.done) $("verdict").scrollIntoView({ behavior: "smooth", block: "start" });

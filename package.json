@@ -6,6 +6,7 @@
     "test": "node src/test.js 500"
   },
   "config": {
-    "cloudflareBeacon": "54fb48281c62456da59255d39e2ef3a9"
+    "cloudflareBeacon": "54fb48281c62456da59255d39e2ef3a9",
+    "statsUrl": ""
   }
 }
