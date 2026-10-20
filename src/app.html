@@ -56,6 +56,22 @@ section { display: flex; flex-direction: column; gap: 12px; }
 .clues li::before { counter-increment: c; content: "No." counter(c); font: 500 11px/1.9 var(--mono); color: var(--muted); }
 .code { display: block; font: 500 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--brass); margin-bottom: 2px; }
 .ciph { font-family: var(--mono); font-size: 14px; letter-spacing: .02em; }
+.evidence { display: flex; flex-direction: column; gap: 18px; }
+.egroup { display: flex; flex-direction: column; gap: 8px; }
+.egroup h3 { margin: 0; font: italic 400 18px/1.2 var(--display); }
+.who { display: block; font-size: 12px; font-weight: 600; color: var(--muted); }
+.tray { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
+.tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.tool { border: 1px solid var(--line); background: var(--paper); border-radius: 4px; padding: 6px 10px; font: 500 13px var(--body); min-height: 36px; }
+.tool[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.tool.tile { font: 600 15px var(--mono); min-width: 36px; padding: 6px; }
+.tool:disabled { opacity: .3; }
+.stepper { display: inline-flex; align-items: center; gap: 6px; }
+.stepper .tool { min-width: 36px; font-size: 16px; }
+.shiftval { font: 500 12px var(--mono); min-width: 88px; text-align: center; }
+.out { color: var(--accent); }
+.keycard summary { cursor: pointer; font-size: 13px; font-weight: 600; min-height: 32px; display: flex; align-items: center; }
+.keygrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 4px; font: 13px var(--mono); padding-top: 6px; }
 .decoded { display: block; color: var(--muted); font-size: 13px; margin-top: 4px; }
 .clues.hints li::before { content: "Hint " counter(c); }
 .clues.hints li { grid-template-columns: 52px 1fr; }
@@ -141,8 +157,8 @@ dialog ol, dialog ul { padding-left: 20px; }
   </section>
 
   <section>
-    <div><span class="label">Evidence</span><h2>What the household told you</h2></div>
-    <ol class="clues" id="clues"></ol>
+    <div><span class="label">Evidence</span><h2>What you have learned</h2></div>
+    <div class="evidence" id="clues"></div>
     <p class="hint">Some evidence arrives in code, and each clue says which kind. This evidence is enough to name the killer with certainty. Each wrong accusation unseals one extra hint below.</p>
     <ol class="clues hints" id="hints"></ol>
   </section>
@@ -174,7 +190,7 @@ dialog ol, dialog ul { padding-left: 20px; }
   <p>Every day there is one new murder at Redwing Manor. Five guests, five items, five rooms. One guest is the killer.</p>
   <ol>
     <li>Read the scene and the evidence. Use the dossier: height, handedness, how heavy an item is, and whether a room is indoors.</li>
-    <li>Crack the coded evidence. Each day of the week brings different codes: anagrams, trivia, general knowledge (Merlot and Malbec point to the Wine Cellar), number codes, Morse, mirror writing and shifted-letter notes. Every coded clue says how it was encoded.</li>
+    <li>Crack the coded evidence. Each day of the week brings different codes: anagrams, trivia, general knowledge (Merlot and Malbec point to the Wine Cellar), number codes, Morse, mirror writing and shifted-letter notes. Coded notes come with a decoder: you work out which tool cracks it. Anagrams come with letter tiles, and number and Morse codes with a code card.</li>
     <li>Mark your notebook. Each guest pairs with exactly one item and one room.</li>
     <li>Accuse a suspect, weapon and location. You have 6 accusations.</li>
     <li>A wrong accusation tells you nothing except that you were wrong, and unseals a hint.</li>
@@ -262,13 +278,26 @@ dialog ol, dialog ul { padding-left: 20px; }
     }));
 
     // Clues
-    var ol = $("clues"); ol.innerHTML = "";
+    var box = $("clues"); box.innerHTML = "";
+    var groups = { household: "What the household told you", witness: "What others told you", observed: "What you observed yourself" };
+    var lists = {}, start = 1;
+    Object.keys(groups).forEach(function (g) {
+      var mine = C.clues.filter(function (c) { return c.source === g; });
+      if (!mine.length) return;
+      var ol = el("ol", { class: "clues", start: String(start), style: "counter-reset: c " + (start - 1) });
+      start += mine.length;
+      box.appendChild(el("div", { class: "egroup" }, [el("h3", { text: groups[g] }), ol]));
+      lists[g] = ol;
+    });
     C.clues.forEach(function (c) {
       var body = el("span");
       if (c.code) body.appendChild(el("span", { class: "code", text: c.code }));
+      if (c.speaker) body.appendChild(el("span", { class: "who", text: c.speaker + (c.cipher ? "" : " says") }));
       body.appendChild(el("span", { class: c.cipher ? "ciph" : "", text: c.text }));
-      if (c.code && state.done) body.appendChild(el("span", { class: "decoded", text: "Decoded: " + c.plain }));
-      ol.appendChild(el("li", {}, [body]));
+      if (c.cipher && !state.done) body.appendChild(noteDecoder(c));
+      else if (c.puzzle && !state.done) body.appendChild(nameHelper(c.puzzle));
+      if (c.code && state.done) body.appendChild(el("span", { class: "decoded", text: "Decoded" + (c.method ? " (" + c.method + ")" : "") + ": " + c.plain }));
+      lists[c.source].appendChild(el("li", {}, [body]));
     });
     var hl = $("hints"); hl.innerHTML = "";
     var n = hintsOpen();
@@ -282,6 +311,65 @@ dialog ol, dialog ul { padding-left: 20px; }
     renderNotebook();
     renderPicker();
     renderVerdict();
+  }
+
+  // Decoder tray for coded notes: the player picks the method, the tray does the letter-by-letter work.
+  function noteDecoder(c) {
+    var st = { shift: 0, mirror: false, flip: false };
+    var out = el("span", { class: "ciph out" });
+    var shiftLbl = el("span", { class: "shiftval" });
+    function show() {
+      var t = c.text;
+      if (st.flip) t = t.split("").reverse().join("");
+      if (st.mirror) t = Redwing.atbash(t);
+      t = Redwing.caesar(t, (26 - st.shift) % 26);
+      out.textContent = t;
+      shiftLbl.textContent = "Shift back " + st.shift;
+      mBtn.setAttribute("aria-pressed", String(st.mirror));
+      fBtn.setAttribute("aria-pressed", String(st.flip));
+    }
+    function btn(label, fn, extra) { var b = el("button", Object.assign({ class: "tool", type: "button", text: label }, extra || {})); b.addEventListener("click", function () { fn(); show(); }); return b; }
+    var minus = btn("−", function () { st.shift = (st.shift + 25) % 26; }, { "aria-label": "Shift one less" });
+    var plus = btn("+", function () { st.shift = (st.shift + 1) % 26; }, { "aria-label": "Shift one more" });
+    var mBtn = btn("Mirror A↔Z", function () { st.mirror = !st.mirror; });
+    var fBtn = btn("Read backwards", function () { st.flip = !st.flip; });
+    var reset = btn("Reset", function () { st.shift = 0; st.mirror = false; st.flip = false; });
+    var tray = el("div", { class: "tray" }, [
+      el("span", { class: "label", text: "Decoder · try the tools until it reads as English" }),
+      el("div", { class: "tools" }, [el("span", { class: "stepper" }, [minus, shiftLbl, plus]), mBtn, fBtn, reset]),
+      out
+    ]);
+    show();
+    return tray;
+  }
+  // Helpers for disguised names: letter tiles for anagrams, a code card for numbers and Morse.
+  function nameHelper(pz) {
+    var tray = el("div", { class: "tray" });
+    if (pz.type === "anagram") {
+      var built = el("span", { class: "ciph out", text: "Tap the letters in order" }), word = "";
+      var tiles = el("div", { class: "tools" });
+      pz.token.split("").forEach(function (ch) {
+        var t = el("button", { class: "tool tile", type: "button", text: ch });
+        t.addEventListener("click", function () { if (t.disabled) return; t.disabled = true; word += ch; built.textContent = word; });
+        tiles.appendChild(t);
+      });
+      var clear = el("button", { class: "tool", type: "button", text: "Clear" });
+      clear.addEventListener("click", function () { word = ""; built.textContent = "Tap the letters in order"; tiles.querySelectorAll(".tile").forEach(function (b) { b.disabled = false; }); });
+      tiles.appendChild(clear);
+      tray.appendChild(el("span", { class: "label", text: "Letter tiles" })); tray.appendChild(tiles); tray.appendChild(built);
+      return tray;
+    }
+    if (pz.type === "numbers" || pz.type === "morse") {
+      var d = el("details", { class: "keycard" });
+      d.appendChild(el("summary", { text: pz.type === "morse" ? "Show the Morse card" : "Show the number card" }));
+      var grid = el("div", { class: "keygrid" });
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").forEach(function (ch, i) {
+        grid.appendChild(el("span", { text: ch + " " + (pz.type === "morse" ? Redwing.MORSE[ch] : String(i + 1)) }));
+      });
+      d.appendChild(grid); tray.appendChild(d);
+      return tray;
+    }
+    return el("span");
   }
 
   function renderNotebook() {

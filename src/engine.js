@@ -129,7 +129,7 @@ var Redwing = (function () {
       function (s, x) { return "Whatever " + s + " was holding, it was not the " + x + "."; }
     ];
     var negL = [
-      function (s, x) { return "A footman swears " + s + " was nowhere near the " + x + "."; },
+      function (s, x) { return s + " was nowhere near the " + x + "."; },
       function (s, x) { return s + " was not in the " + x + "."; }
     ];
     var negWL = [
@@ -265,12 +265,13 @@ var Redwing = (function () {
   }
   // Ways to disguise one name inside a clue. Each returns the replacement phrase and the label shown to players.
   var NAME_CODES = {
-    anagram: function (word, cat, rng) { return { phrase: cat + " is an anagram of " + anagram(word, rng), label: "Anagram" }; },
+    anagram: function (word, cat, rng) { var a = anagram(word, rng); return { phrase: cat + " is an anagram of " + a, label: "Anagram", token: a }; },
     numbers: function (word, cat) {
-      return { phrase: cat + " spells " + word.split("").map(function (ch) { return ch.charCodeAt(0) - 64; }).join("-"), label: "Number code · A=1, B=2 … Z=26" };
+      var t = word.split("").map(function (ch) { return ch.charCodeAt(0) - 64; }).join("-");
+      return { phrase: cat + " spells " + t, label: "Number code · A=1, B=2 … Z=26", token: t };
     },
-    morse: function (word, cat) { return { phrase: cat + " is " + word.split("").map(function (ch) { return MORSE[ch]; }).join(" "), label: "Morse code" }; },
-    mirror: function (word, cat) { return { phrase: cat + " reads " + word.split("").reverse().join("") + " backwards", label: "Mirror writing" }; }
+    morse: function (word, cat) { var t = word.split("").map(function (ch) { return MORSE[ch]; }).join(" "); return { phrase: cat + " is " + t, label: "Morse code", token: t }; },
+    mirror: function (word, cat) { var t = word.split("").reverse().join(""); return { phrase: cat + " reads " + t + " backwards", label: "Mirror writing", token: t }; }
   };
   var NOTE_CODES = {
     caesar: function (text, rng) { var k = 2 + Math.floor(rng() * 6); return { text: caesar(text, k), label: "Coded note · shift each letter back " + k }; },
@@ -319,19 +320,47 @@ var Redwing = (function () {
         var c = out[free[n]];
         if (NOTE_CODES[code]) {
           var r = NOTE_CODES[code](c.text, rng);
-          c.text = r.text; c.code = r.label; c.cipher = true;
+          c.text = r.text; c.code = "Coded note"; c.method = r.label.replace("Coded note · ", ""); c.cipher = true;
         } else {
           var hit = findName(c, S, W, L, code);
           if (!hit) continue;
-          var phrase = code === "trivia" ? "the " + TRIVIA[hit.name] : code === "knowledge" ? "the " + KNOW[hit.name] : NAME_CODES[code](hit.word, hit.cat, rng).phrase;
+          var nc = NAME_CODES[code] ? NAME_CODES[code](hit.word, hit.cat, rng) : null;
+          var phrase = code === "trivia" ? "the " + TRIVIA[hit.name] : code === "knowledge" ? "the " + KNOW[hit.name] : nc.phrase;
           c.text = swapName(c.text, hit, phrase);
-          c.code = code === "trivia" ? "Trivia" : code === "knowledge" ? "General knowledge · what is it a type of?" : NAME_CODES[code](hit.word, hit.cat, rng).label;
+          c.code = code === "trivia" ? "Trivia" : code === "knowledge" ? "General knowledge · what is it a type of?" : nc.label;
+          if (nc) c.puzzle = { type: code, token: nc.token };
         }
         free.splice(n, 1);
         return;
       }
     });
     return out;
+  }
+
+  // Where each piece of evidence came from: the household staff, outside witnesses, or the detective's own eyes.
+  var SOURCES = ["household", "witness", "observed"];
+  var STAFF = ["The butler", "The cook", "The footman", "A housemaid", "The chauffeur", "The head gardener"];
+  var WITNESSES = ["The village constable", "A passing postman", "The vicar's wife", "A neighbouring farmer", "The station porter", "The doctor's receptionist"];
+  function assignSources(clues, rng) {
+    var staff = shuffle(STAFF, rng), wit = shuffle(WITNESSES, rng), turn = rng() < 0.5 ? 0 : 1;
+    clues.forEach(function (c) {
+      if (/shoes|found|kept indoors|turned up/.test(c.plain)) c.source = "observed";
+      else { c.source = turn % 2 ? "witness" : "household"; turn++; }
+    });
+    // Make sure every case uses all three kinds of evidence where it can.
+    SOURCES.forEach(function (src) {
+      if (clues.some(function (c) { return c.source === src; })) return;
+      var counts = {}; clues.forEach(function (c) { counts[c.source] = (counts[c.source] || 0) + 1; });
+      var donor = clues.filter(function (c) { return counts[c.source] > 1 && (src !== "observed" || c.cipher); })[0];
+      if (donor) donor.source = src;
+    });
+    var si = 0, wi = 0;
+    clues.forEach(function (c) {
+      if (c.source === "household") c.speaker = staff[si++ % staff.length];
+      else if (c.source === "witness") c.speaker = wit[wi++ % wit.length];
+      else if (c.cipher) c.speaker = "A note you found";
+    });
+    return clues.slice().sort(function (a, b) { return SOURCES.indexOf(a.source) - SOURCES.indexOf(b.source); });
   }
 
   function generate(seed, opts) {
@@ -372,7 +401,7 @@ var Redwing = (function () {
       if (chosen.length < 5 || chosen.length > 9) continue;
       if (chosen.filter(function (c) { return c.kind === "pos"; }).length > 1) continue;
       chosen = shuffle(chosen, rng);
-      chosen = encodeCryptic(chosen, S, W, L, rng, theme);
+      chosen = assignSources(encodeCryptic(chosen, S, W, L, rng, theme), rng);
       // Hints: extra clues unsealed by wrong accusations, weakest first, so the core set alone stays sufficient.
       var used = {}; chosen.forEach(function (c) { used[c.text] = true; });
       var spare = shuffle(cand.filter(function (c) { return !used[c.text]; }), rng);
@@ -399,7 +428,7 @@ var Redwing = (function () {
         answer: { s: m, w: sol.w[m], l: sol.l[m] },
         murderClue: mc.text, murderType: mc.type,
         theme: theme.name,
-        clues: chosen.map(function (c) { return { text: c.text, plain: c.plain, code: c.code, cipher: !!c.cipher, kind: c.kind }; }),
+        clues: chosen.map(function (c) { return { text: c.text, plain: c.plain, code: c.code, method: c.method || null, puzzle: c.puzzle || null, cipher: !!c.cipher, kind: c.kind, source: c.source, speaker: c.speaker || null }; }),
         hints: hints.map(function (c) { return { text: c.text, kind: c.kind }; }),
         steps: steps,
         attempts: ATTEMPTS,
@@ -410,6 +439,6 @@ var Redwing = (function () {
     throw new Error("Could not build a case for seed " + seed);
   }
 
-  return { generate: generate, SIZE: SIZE, ATTEMPTS: ATTEMPTS };
+  return { generate: generate, SIZE: SIZE, ATTEMPTS: ATTEMPTS, caesar: caesar, atbash: atbash, MORSE: MORSE };
 })();
 if (typeof module !== "undefined") module.exports = Redwing;
