@@ -9,6 +9,8 @@ const src = (f) => fs.readFileSync(__dirname + '/src/' + f, 'utf8');
 const cfg = require('./package.json').config || {};
 
 const LAUNCH = '2026-10-20';
+const SITE = 'https://brainbrew.fun/';
+const ICON = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="10" fill="#8B1E2D"/><text x="32" y="47" font-family="Georgia,serif" font-size="44" text-anchor="middle" fill="#fff">R</text></svg>');
 const ITER = 300000;        // PBKDF2 rounds per accusation check: a moment on a phone, and slow to brute-force
 const PRACTICE = 40;        // size of the practice pool
 const ymd = (d) => d.toISOString().slice(0, 10);
@@ -56,13 +58,25 @@ function practiceCode(i) { return crypto.createHash('sha256').update('practice-'
 function build() {
   const analytics = (cfg.cloudflareBeacon ? '<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon=\'{"token": "' + cfg.cloudflareBeacon + '"}\'></script>\n' : '') +
     (cfg.goatcounter ? '<script data-goatcounter="https://' + cfg.goatcounter + '.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>\n' : '');
-  const page = (body) => '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<style>[hidden]{display:none!important} body{margin:0}</style>\n</head>\n<body>\n' + body + '\n' + analytics + '</body>\n</html>\n';
+  // Link previews (Open Graph and X cards) and icons, so a shared link shows the game's name, blurb and picture.
+  const esc = (t) => t.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  const meta = (m) => [
+    '<meta name="description" content="' + esc(m.desc) + '">',
+    '<meta property="og:type" content="website">', '<meta property="og:site_name" content="Brainbrew">',
+    '<meta property="og:title" content="' + esc(m.title) + '">', '<meta property="og:description" content="' + esc(m.desc) + '">',
+    '<meta property="og:url" content="' + SITE + m.path + '">', '<meta property="og:image" content="' + SITE + 'redwing/og.png">',
+    '<meta property="og:image:width" content="1200">', '<meta property="og:image:height" content="630">',
+    '<meta name="twitter:card" content="summary_large_image">', '<meta name="theme-color" content="#8B1E2D">',
+    '<link rel="icon" href="' + ICON + '">', '<link rel="apple-touch-icon" href="/redwing/icon-180.png">'
+  ].join('\n') + '\n';
+  const page = (body, m) => '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n' + meta(m) + '<style>[hidden]{display:none!important} body{margin:0}</style>\n</head>\n<body>\n' + body + '\n' + analytics + '</body>\n</html>\n';
   const write = (file, text) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, text); };
   const dist = __dirname + '/dist';
   fs.rmSync(dist + '/redwing/cases', { recursive: true, force: true });
 
-  write(dist + '/index.html', page(src('hub.html')));
-  write(dist + '/redwing/index.html', page(src('app.html').replace('<!--HOME-->', '<a class="home" href="../">← Brainbrew</a>').replace('/*ANSWER_DESK*/', cfg.answerDesk || '')));
+  write(dist + '/index.html', page(src('hub.html'), { title: 'Brainbrew: daily puzzles', desc: 'Small daily puzzles worth a coffee break, starting with Detective Redwing, a new murder or theft every day.', path: '' }));
+  write(dist + '/redwing/index.html', page(src('app.html').replace('<!--HOME-->', '<a class="home" href="../">← Brainbrew</a>').replace('/*ANSWER_DESK*/', cfg.answerDesk || ''), { title: 'Detective Redwing', desc: 'A new murder or theft for Detective Redwing every day. Crack the coded evidence and name the culprit in six accusations.', path: 'redwing/' }));
+  ['og.png', 'icon-180.png'].forEach((f) => { fs.mkdirSync(dist + '/redwing', { recursive: true }); fs.copyFileSync(__dirname + '/src/assets/' + f, dist + '/redwing/' + f); });
 
   // Daily cases for the archive week and a few days ahead, so every time zone has today's case between nightly builds.
   if (!SEED) console.warn('REDWING_SECRET is not set: these cases can be rebuilt by anyone from the public repo.');
