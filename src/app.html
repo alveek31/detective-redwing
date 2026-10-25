@@ -141,6 +141,15 @@ dialog::backdrop { background: rgba(10, 12, 16, .55); }
 dialog ol, dialog ul { padding-left: 20px; }
 .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center; font-variant-numeric: tabular-nums; }
 .stats b { display: block; font: 400 28px var(--display); }
+.stats { grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); margin-top: 14px; }
+.rankbar { height: 8px; background: var(--paper); border: 1px solid var(--line); border-radius: 99px; overflow: hidden; margin-top: 6px; }
+.rankbar i { display: block; height: 100%; background: var(--accent); }
+.namebox { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--paper); color: var(--ink); min-height: 44px; flex: 1; min-width: 0; }
+.board { border-collapse: collapse; width: 100%; font-size: 14px; margin-top: 12px; }
+.board th, .board td { padding: 6px 4px; border-bottom: 1px solid var(--line); text-align: center; white-space: nowrap; }
+.board th:first-child, .board td:first-child { text-align: left; }
+.board tr.me td { font-weight: 600; }
+.board .x { border: 0; background: none; color: var(--muted); min-width: 32px; min-height: 32px; }
 .bars { display: flex; flex-direction: column; gap: 4px; font: 12px var(--mono); }
 .bar { display: flex; gap: 6px; align-items: center; }
 .bar i { display: block; height: 16px; background: var(--ink); min-width: 4px; }
@@ -202,6 +211,7 @@ dialog ol, dialog ul { padding-left: 20px; }
     <nav class="tools">
       <button class="btn" id="btnHow">How to play</button>
       <button class="btn" id="btnCases">Case files</button>
+      <button class="btn" id="btnFriends">Friends</button>
       <button class="btn" id="btnStats">Record</button>
     </nav>
   </header>
@@ -279,10 +289,35 @@ dialog ol, dialog ul { padding-left: 20px; }
 </dialog>
 
 <dialog id="dlgStats">
-  <h2>Your record</h2>
+  <span class="label">Your rank</span>
+  <h2 id="rankName">Rookie</h2>
+  <div class="rankbar"><i id="rankFill"></i></div>
+  <p class="hint" id="rankNext"></p>
   <div class="stats" id="stats"></div>
   <p class="label" style="margin-top:16px">Solved on accusation</p>
   <div class="bars" id="bars"></div>
+  <p class="hint" id="statsNote" style="margin-top:10px"></p>
+  <form method="dialog" style="margin-top:16px"><button class="btn">Close</button></form>
+</dialog>
+
+<dialog id="dlgFriends">
+  <span class="label">This week</span>
+  <h2>Friends board</h2>
+  <p class="hint">Pick a detective name, then send friends your invite link. When a friend opens your link, or a result you share, you appear on their board, and the same goes the other way. A board catches up each time a friend shares a result.</p>
+  <div class="pickrow"><label class="label" for="myName">Your detective name</label>
+    <div class="sharerow"><input id="myName" maxlength="16" autocomplete="nickname" placeholder="e.g. Sam" class="namebox"><button class="btn primary" id="btnInvite" type="button">Share invite link</button></div></div>
+  <div class="nb-scroll"><table class="board" id="board"></table></div>
+  <form method="dialog" style="margin-top:16px"><button class="btn">Close</button></form>
+</dialog>
+
+<dialog id="dlgRemind">
+  <h2>Daily reminder</h2>
+  <p class="hint">Adds a repeating event to your phone's calendar with a link to the day's case. No sign-up, and you can delete it any time from your calendar.</p>
+  <div class="pickrow"><label class="label" for="remindAt">Remind me at</label><input type="time" id="remindAt" value="09:00" class="namebox"></div>
+  <div class="sharerow" style="margin-top:12px">
+    <button class="btn primary" id="btnIcs" type="button">Apple or Outlook calendar</button>
+    <a class="btn" id="lnkGcal" target="_blank" rel="noopener">Google Calendar</a>
+  </div>
   <form method="dialog" style="margin-top:16px"><button class="btn">Close</button></form>
 </dialog>
 
@@ -336,7 +371,7 @@ dialog ol, dialog ul { padding-left: 20px; }
     asking = true;
     var mine = current;
     fetch(ANSWER_DESK + "/reveal", { method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ date: current.date, guesses: state.guesses.map(function (g) { return { s: g.s, w: g.w, l: g.l }; }) }) })
+      body: JSON.stringify({ date: current.date, desk: C.desk, guesses: state.guesses.map(function (g) { return { s: g.s, w: g.w, l: g.l }; }) }) })
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(function (v) { asking = false; if (current !== mine) return; V = v; state.reveal = v; save(); render(); },
         function () { asking = false; if (current !== mine) return; deskFailed = true; renderVerdict(); });
@@ -389,9 +424,9 @@ dialog ol, dialog ul { padding-left: 20px; }
     var S = C.suspects, W = C.weapons, L = C.locations, Wd = C.words, sc = C.scene;
     $("meta").textContent = (current.kind === "daily"
       ? "Case No. " + caseNo(current.date) + " · " + new Date(current.date + "T12:00:00").toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long", year: "numeric" })
-      : "Practice case " + current.code) + " · " + (theft() ? "Theft" : "Murder") + " · " + C.theme;
+      : "Practice case " + current.code) + " · " + (theft() ? "Theft" : "Murder") + " · " + (C.big ? "Sunday Big Case" : C.theme);
     var names = list(S.map(function (s) { return s.name; }));
-    $("brief").textContent = "A case for Detective Redwing " + sc.at + ". " + (theft()
+    $("brief").textContent = (C.big ? "The Sunday Big Case: more evidence to sift, no one placed outright, and only three hints. " : "") + "A case for Detective Redwing " + sc.at + ". " + (theft()
       ? "Overnight, " + C.victim + " passed five treasures round for the " + sc.guests + " to admire, and by morning one had vanished. The five " + sc.guests + " were " + names + ". Each held one piece and kept to one room. One of them pocketed theirs."
       : C.victim + " has been found dead. Five " + sc.guests + " were there that night: " + names + ". Each had one item and kept to one room. One of them is lying.");
     $("scene").textContent = C.murderClue;
@@ -685,31 +720,50 @@ dialog ol, dialog ul { padding-left: 20px; }
     });
   }
 
+  // Detective ranks climb with daily cases solved. Solving a case that pushes you over a line is a promotion.
+  var RANKS = [[0, "Rookie"], [3, "Constable"], [10, "Sergeant"], [25, "Detective"], [50, "Inspector"], [100, "Chief Inspector"]];
+  function rankOf(won) {
+    var i = 0; while (i + 1 < RANKS.length && won >= RANKS[i + 1][0]) i++;
+    return { name: RANKS[i][1], at: RANKS[i][0], next: RANKS[i + 1] || null };
+  }
+  function loadStats() {
+    var st = store("rw2:stats") || {};
+    return Object.assign({ played: 0, won: 0, streak: 0, best: 0, dist: [0, 0, 0, 0, 0, 0], last: null, lastWin: null, days: {}, big: 0 }, st);
+  }
   function recordResult() {
     if (current.kind !== "daily") return;
-    var st = store("rw2:stats") || { played: 0, won: 0, streak: 0, best: 0, dist: [0, 0, 0, 0, 0, 0], last: null, lastWin: null };
-    if (st.last === current.date) return;
+    var st = loadStats();
+    if (st.days[current.date] != null || st.last === current.date) return;
+    var before = rankOf(st.won).name;
     st.played++; st.last = current.date;
+    // Per-day results (accusations used, 0 for unsolved) feed the friends board; keep about two months.
+    st.days[current.date] = state.won ? state.guesses.length : 0;
+    Object.keys(st.days).sort().slice(0, -60).forEach(function (d) { delete st.days[d]; });
     if (state.won) {
       st.won++; st.dist[state.guesses.length - 1]++;
+      if (C.big) st.big++;
       var prev = new Date(current.date + "T12:00:00"); prev.setDate(prev.getDate() - 1);
       st.streak = st.lastWin === ymd(prev) ? st.streak + 1 : 1;
       st.lastWin = current.date; st.best = Math.max(st.best, st.streak);
     } else st.streak = 0;
     store("rw2:stats", st);
+    var after = rankOf(st.won).name;
+    if (after !== before) setTimeout(function () { toast("Promoted: you are now " + after + " Redwing."); }, 900);
+    showRank();
   }
+  function showRank() { $("btnStats").textContent = rankOf(loadStats().won).name; }
 
   // Spoiler-free result: case number, scene and case type, then one square per accusation.
   var SITE = "https://brainbrew.fun/redwing/";
   function shareText() {
     var row = state.guesses.map(function (g) { return g.hits === 3 ? "🟩" : "🟥"; }).join("");
-    var head = "🕵️ Detective Redwing " + (current.kind === "daily" ? "#" + caseNo(current.date) : "practice") + " " + (EMOJI[C.scene.id] || "") + (theft() ? "💎" : "🔪") + " " + (state.won ? state.guesses.length : "X") + "/" + C.attempts;
+    var head = "🕵️ Detective Redwing " + (current.kind === "daily" ? "#" + caseNo(current.date) : "practice") + " " + (EMOJI[C.scene.id] || "") + (theft() ? "💎" : "🔪") + (C.big ? "⭐" : "") + " " + (state.won ? state.guesses.length : "X") + "/" + C.attempts;
     return head + "\n" + row;
   }
   // The result card plus buttons: the phone's own share sheet where there is one (it lists the player's apps),
   // direct links for X and WhatsApp, and copy as the fallback everywhere.
   function shareBox() {
-    var txt = shareText(), full = txt + "\n" + SITE, box = el("div", { class: "sharebox" });
+    var url = myLink(), txt = shareText(), full = txt + "\n" + url, box = el("div", { class: "sharebox" });
     var pre = el("pre", { class: "share", text: full });
     function copy() {
       try { navigator.clipboard.writeText(full).then(function () { toast("Copied. Paste it anywhere."); }, function () { selectPre(pre); }); }
@@ -720,7 +774,7 @@ dialog ol, dialog ul { padding-left: 20px; }
     main.addEventListener("click", function () {
       track("shared/" + caseTag());
       if (!native) return copy();
-      navigator.share({ text: txt, url: SITE }).catch(function (e) { if (!e || e.name !== "AbortError") copy(); });
+      navigator.share({ text: txt, url: url }).catch(function (e) { if (!e || e.name !== "AbortError") copy(); });
     });
     function link(label, href) {
       var a = el("a", { class: "btn", href: href, target: "_blank", rel: "noopener", text: label });
@@ -731,6 +785,7 @@ dialog ol, dialog ul { padding-left: 20px; }
       link("Post on X", "https://twitter.com/intent/tweet?text=" + encodeURIComponent(full)),
       link("WhatsApp", "https://wa.me/?text=" + encodeURIComponent(full))]);
     if (native) { var c = el("button", { class: "btn", type: "button", text: "Copy" }); c.addEventListener("click", copy); row.appendChild(c); }
+    var bell = el("button", { class: "btn", type: "button", text: "🔔 Daily reminder" }); bell.addEventListener("click", openRemind); row.appendChild(bell);
     box.appendChild(pre); box.appendChild(row);
     return box;
   }
@@ -788,17 +843,121 @@ dialog ol, dialog ul { padding-left: 20px; }
   var tt;
   function toast(msg) { var t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(tt); tt = setTimeout(function () { t.hidden = true; }, 2600); }
 
+  // Friends board without accounts. Each player has a short code: a random id, their name and their last 14 daily
+  // results. Shared links carry it as ?pal=..., and opening one adds or refreshes that friend in this browser.
+  function me() { var m = store("rw:me") || {}; if (!m.id) { m.id = Math.random().toString(36).slice(2, 8); store("rw:me", m); } return m; }
+  function dateOf(n) { var d = new Date(LAUNCH + "T12:00:00"); d.setDate(d.getDate() + n - 1); return ymd(d); }
+  function myCode() {
+    var m = me(), days = loadStats().days, end = caseNo(today), res = "";
+    for (var n = end - 13; n <= end; n++) { var v = n >= 1 ? days[dateOf(n)] : null; res += v == null ? "-" : String(v); }
+    return [m.id, end, res, m.name || ""].join(".");
+  }
+  function myLink() { return me().name ? SITE + "?pal=" + encodeURIComponent(myCode()) : SITE; }
+  function parseCode(code) {
+    var p = String(code || "").split("."), name = p.slice(3).join(".").slice(0, 16);
+    if (p.length < 4 || !/^[a-z0-9]{4,8}$/.test(p[0]) || !/^\d{1,5}$/.test(p[1]) || !/^[-0-6]{14}$/.test(p[2]) || !name) return null;
+    return { id: p[0], end: +p[1], res: p[2], name: name };
+  }
+  function takePal() {
+    var m = location.search.match(/[?&]pal=([^&]+)/); if (!m) return;
+    try { history.replaceState(null, "", location.pathname + location.hash); } catch (e) {}
+    var f = parseCode(decodeURIComponent(m[1])); if (!f || f.id === me().id) return;
+    var all = store("rw:friends") || {}, old = all[f.id];
+    if (!old || old.end <= f.end) { all[f.id] = f; store("rw:friends", all); }
+    toast(old ? f.name + "'s results are up to date." : f.name + " is on your friends board.");
+  }
+  function resultOn(f, date) {
+    var i = caseNo(date) - (f.end - 13); if (i < 0 || i > 13) return null;
+    var ch = f.res.charAt(i); return ch === "-" ? null : +ch;
+  }
+  function openFriends() {
+    var m = me(); $("myName").value = m.name || "";
+    renderBoard(); $("dlgFriends").showModal();
+  }
+  function renderBoard() {
+    var t = $("board"); t.innerHTML = "";
+    var dates = []; for (var k = 6; k >= 0; k--) { var d = new Date(); d.setDate(d.getDate() - k); var ds = ymd(d); if (caseNo(ds) >= 1) dates.push(ds); }
+    var days = loadStats().days, people = [{ name: me().name ? me().name + " (you)" : "You", me: true, get: function (ds) { return days[ds] == null ? null : days[ds]; } }];
+    var friends = store("rw:friends") || {};
+    Object.keys(friends).forEach(function (id) { var f = friends[id]; people.push({ id: id, name: f.name, get: function (ds) { return resultOn(f, ds); } }); });
+    people.forEach(function (p) {
+      var vals = dates.map(p.get), solved = vals.filter(function (v) { return v > 0; });
+      p.vals = vals; p.solved = solved.length; p.avg = solved.length ? solved.reduce(function (a, b) { return a + b; }, 0) / solved.length : 9;
+    });
+    people.sort(function (a, b) { return b.solved - a.solved || a.avg - b.avg; });
+    var head = el("tr", {}, [el("th", { text: "Detective" })]);
+    dates.forEach(function (ds) { head.appendChild(el("th", { text: new Date(ds + "T12:00:00").toLocaleDateString(undefined, { weekday: "narrow" }) })); });
+    head.appendChild(el("th", { text: "Solved" })); head.appendChild(el("th"));
+    t.appendChild(head);
+    people.forEach(function (p) {
+      var tr = el("tr", { class: p.me ? "me" : "" }, [el("td", { text: p.name })]);
+      p.vals.forEach(function (v) { tr.appendChild(el("td", { text: v == null ? "·" : v ? String(v) : "✗", title: v ? "Solved in " + v : v === 0 ? "Unsolved" : "Not played" })); });
+      tr.appendChild(el("td", { text: String(p.solved) }));
+      var cell = el("td");
+      if (!p.me) {
+        var x = el("button", { class: "x", type: "button", text: "✕", "aria-label": "Remove " + p.name });
+        x.addEventListener("click", function () { var all = store("rw:friends") || {}; delete all[p.id]; store("rw:friends", all); renderBoard(); });
+        cell.appendChild(x);
+      }
+      tr.appendChild(cell); t.appendChild(tr);
+    });
+    if (people.length === 1) t.appendChild(el("tr", {}, [el("td", { colspan: String(dates.length + 3), class: "hint", text: "No friends yet. Share your invite link to start a board." })]));
+  }
+  function saveName() { var m = me(); m.name = $("myName").value.trim().replace(/\./g, "").slice(0, 16); store("rw:me", m); renderBoard(); }
+  function invite() {
+    saveName();
+    if (!me().name) { $("myName").focus(); toast("Pick a detective name first."); return; }
+    var link = myLink(), txt = "Join me on Detective Redwing, a new mystery every day. Here's my friends board link:";
+    track("invited");
+    if (navigator.share) navigator.share({ text: txt, url: url }).catch(function () {});
+    else try { navigator.clipboard.writeText(txt + " " + link).then(function () { toast("Invite link copied."); }); } catch (e) { toast(link); }
+  }
+
+  // Daily reminder through the player's own calendar: an .ics file (Apple, Outlook) or a Google Calendar link,
+  // repeating every day at the chosen time with a link back to the game. No server or sign-up involved.
+  function openRemind() { updateGcal(); $("dlgRemind").showModal(); }
+  function remindStart() {
+    var t = ($("remindAt").value || "09:00").split(":"), d = new Date(); d.setDate(d.getDate() + 1); d.setHours(+t[0], +t[1], 0, 0);
+    var p = function (n) { return String(n).padStart(2, "0"); };
+    return { start: d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + "T" + p(d.getHours()) + p(d.getMinutes()) + "00" };
+  }
+  function updateGcal() {
+    var r = remindStart();
+    $("lnkGcal").href = "https://calendar.google.com/calendar/render?action=TEMPLATE&text=" + encodeURIComponent("Detective Redwing: today's case") +
+      "&details=" + encodeURIComponent(SITE) + "&dates=" + r.start + "/" + r.start + "&recur=" + encodeURIComponent("RRULE:FREQ=DAILY");
+  }
+  function downloadIcs() {
+    var r = remindStart();
+    var ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Brainbrew//Detective Redwing//EN", "BEGIN:VEVENT",
+      "UID:redwing-" + me().id + "@brainbrew.fun", "DTSTAMP:" + new Date().toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z",
+      "DTSTART:" + r.start, "DURATION:PT10M", "RRULE:FREQ=DAILY", "SUMMARY:Detective Redwing: today's case", "URL:" + SITE, "DESCRIPTION:" + SITE,
+      "BEGIN:VALARM", "TRIGGER:PT0M", "ACTION:DISPLAY", "DESCRIPTION:A new case for Detective Redwing", "END:VALARM", "END:VEVENT", "END:VCALENDAR"].join("\r\n");
+    var a = el("a", { href: URL.createObjectURL(new Blob([ics], { type: "text/calendar" })), download: "detective-redwing.ics" });
+    document.body.appendChild(a); a.click(); a.remove();
+    track("reminder");
+  }
+
   function openStats() {
-    var st = store("rw2:stats") || { played: 0, won: 0, streak: 0, best: 0, dist: [0, 0, 0, 0, 0, 0] };
+    var st = loadStats(), r = rankOf(st.won);
+    $("rankName").textContent = r.name + " Redwing";
+    $("rankFill").style.width = (r.next ? Math.round(100 * (st.won - r.at) / (r.next[0] - r.at)) : 100) + "%";
+    $("rankNext").textContent = r.next ? (r.next[0] - st.won) + " more solved case" + (r.next[0] - st.won === 1 ? "" : "s") + " to " + r.next[1] + "." : "The highest rank. The Yard salutes you.";
+    var guesses = st.dist.reduce(function (t, n, i) { return t + n * (i + 1); }, 0);
     var s = $("stats"); s.innerHTML = "";
-    [["Played", st.played], ["Solved %", st.played ? Math.round(100 * st.won / st.played) : 0], ["Streak", st.streak], ["Best", st.best]].forEach(function (p) {
+    [["Played", st.played], ["Solved", st.played ? Math.round(100 * st.won / st.played) + "%" : "–"], ["Avg tries", st.won ? (guesses / st.won).toFixed(1) : "–"],
+      ["Streak", st.streak], ["Best", st.best], ["Big Cases", st.big]].forEach(function (p) {
       var d = el("div"); d.appendChild(el("b", { text: String(p[1]) })); d.appendChild(el("span", { class: "label", text: p[0] })); s.appendChild(d);
     });
-    var b = $("bars"); b.innerHTML = ""; var mx = Math.max.apply(null, st.dist.concat([1]));
-    st.dist.forEach(function (n, i) {
-      var bar = el("i"); bar.style.width = (n / mx * 80) + "%";
-      b.appendChild(el("div", { class: "bar" }, [el("span", { text: String(i + 1) }), bar, el("span", { text: String(n) })]));
+    var b = $("bars"); b.innerHTML = "";
+    var rows = st.dist.map(function (n, i) { return [String(i + 1), n]; }).concat([["✗", st.played - st.won]]);
+    var mx = Math.max.apply(null, rows.map(function (x) { return x[1]; }).concat([1]));
+    rows.forEach(function (x) {
+      var bar = el("i"); bar.style.width = (x[1] / mx * 80) + "%";
+      b.appendChild(el("div", { class: "bar" }, [el("span", { text: x[0] }), bar, el("span", { text: String(x[1]) })]));
     });
+    $("statsNote").textContent = "Daily cases count toward your rank and record. Practice cases don't. Your record lives in this browser.";
+    var rb = $("statsNote").nextElementSibling;
+    if (!rb || rb.id !== "btnRemind2") { rb = el("button", { class: "btn", id: "btnRemind2", type: "button", text: "🔔 Daily reminder" }); rb.addEventListener("click", openRemind); $("statsNote").after(rb); }
     $("dlgStats").showModal();
   }
   function openCases() {
@@ -826,10 +985,18 @@ dialog ol, dialog ul { padding-left: 20px; }
   $("btnHow").addEventListener("click", function () { $("dlgHow").showModal(); });
   $("btnStats").addEventListener("click", openStats);
   $("btnCases").addEventListener("click", openCases);
+  $("btnFriends").addEventListener("click", openFriends);
+  $("myName").addEventListener("change", saveName);
+  $("btnInvite").addEventListener("click", invite);
+  $("remindAt").addEventListener("change", updateGcal);
+  $("btnIcs").addEventListener("click", downloadIcs);
+  $("lnkGcal").addEventListener("click", function () { track("reminder"); });
   $("btnClearNb").addEventListener("click", function () { if (confirm("Clear every mark in your notebook?")) { state.notes = {}; save(); renderNotebook(); } });
   document.querySelectorAll("[data-tab]").forEach(function (b) { b.addEventListener("click", function () { setTab(b.getAttribute("data-tab")); }); });
   document.querySelectorAll("[data-go]").forEach(function (b) { b.addEventListener("click", function () { setTab(b.getAttribute("data-go")); }); });
 
+  showRank();
+  takePal();
   load({ kind: "daily", date: today });
 })();
 </script>

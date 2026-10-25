@@ -55,3 +55,28 @@ for (let d = 0; d < 6; d++) {
 if (!B.revealed('2026-10-24', new Date('2026-10-25T12:00:00Z')) || B.revealed('2026-10-24', new Date('2026-10-25T11:59:00Z'))) { leaks++; console.log('reveal timing'); }
 console.log({ lockChecks: 6, leaks });
 if (leaks) process.exit(1);
+// Sunday Big Cases: harder (more clues, no outright sighting, three hints) but still exactly one answer.
+let bigs = 0;
+for (let k = 0; k < 40; k++) {
+  const c = check('big-' + k, { weekday: 0 });
+  if (!c.big || c.clues.length < 7 || c.hints.length > 3) { bigs++; console.log('big case too easy', k, c.clues.length, c.hints.length); }
+}
+for (let d = 0; d < 21; d++) {
+  const date = ymd(new Date(Date.UTC(2026, 9, 20 + d))), c = R.generate('daily-' + date);
+  if (c.big !== (new Date(date + 'T12:00:00Z').getUTCDay() === 0)) { bigs++; console.log('big case on wrong day', date); }
+}
+// The answer desk copy opens only with the seed secret and the matching date.
+const crypto = require('crypto');
+function openDesk(seedSecret, id, desk) {
+  try {
+    const raw = Buffer.from(desk.data, 'base64'), d = crypto.createDecipheriv('aes-256-gcm', B.deskKey(seedSecret, id), Buffer.from(desk.iv, 'base64'));
+    d.setAuthTag(raw.subarray(raw.length - 16));
+    return JSON.parse(Buffer.concat([d.update(raw.subarray(0, raw.length - 16)), d.final()]).toString());
+  } catch (e) { return null; }
+}
+const dc = B.makeCase('2026-10-25', false, 2000, 'test-secret'), full = R.generate(R.seedFor('test-secret', '2026-10-25'));
+const dv = openDesk('test-secret', '2026-10-25', dc.desk);
+if (!dv || JSON.stringify(dv.answer) !== JSON.stringify(full.answer)) { bigs++; console.log('desk does not open'); }
+if (openDesk('wrong', '2026-10-25', dc.desk) || openDesk('test-secret', '2026-10-24', dc.desk)) { bigs++; console.log('desk opens with the wrong key'); }
+console.log({ bigChecks: bigs ? 'fail' : 'ok' });
+if (bigs) process.exit(1);
