@@ -3,7 +3,8 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: "0 3 * * *"
+    - cron: "0 3 * * *"    # refresh the window of case files
+    - cron: "30 12 * * *"  # unseal yesterday's answers once that date has ended everywhere
   workflow_dispatch:
 permissions:
   contents: read

@@ -34,3 +34,21 @@ console.log(c.scene.name, c.type, c.victim, '|', c.murderClue); c.clues.forEach(
 c.hints.forEach(x => console.log(' H', x.text));
 console.log('answer', c.suspects[c.answer.s].name, c.weapons[c.answer.w].name, c.locations[c.answer.l].name);
 if (fail) process.exit(1);
+// What ships to the browser: no answer, no proof, no decoded clues, and only the right accusation opens the lock.
+const B = require('../build.js');
+let leaks = 0;
+for (let d = 0; d < 6; d++) {
+  const date = new Date(Date.UTC(2026, 9, 20 + d)).toISOString().slice(0, 10);
+  const full = R.generate('daily-' + date), pc = B.makeCase(date, 'daily-' + date, false, 2000), txt = JSON.stringify(pc);
+  if (/"answer"|"solution"|"steps"|"plain"|"method"|"open"/.test(txt)) { leaks++; console.log('field leak', date); }
+  full.clues.forEach((x) => { if (x.code && txt.includes(x.plain)) { leaks++; console.log('decoded clue leak', date); } });
+  let opened = 0;
+  for (let s = 0; s < 5; s++) for (let w = 0; w < 5; w++) for (let l = 0; l < 5; l++) {
+    const v = B.openLock(date, pc.lock, { s, w, l });
+    if (v) { opened++; if (s !== full.answer.s || w !== full.answer.w || l !== full.answer.l || JSON.stringify(v.solution) !== JSON.stringify(full.solution)) { leaks++; console.log("wrong guess opened the lock", date, s, w, l); } }
+  }
+  if (opened !== 1) { leaks++; console.log('lock opened by', opened, 'guesses', date); }
+}
+if (!B.revealed('2026-10-24', new Date('2026-10-25T12:00:00Z')) || B.revealed('2026-10-24', new Date('2026-10-25T11:59:00Z'))) { leaks++; console.log('reveal timing'); }
+console.log({ lockChecks: 6, leaks });
+if (leaks) process.exit(1);

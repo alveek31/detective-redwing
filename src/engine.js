@@ -5,7 +5,7 @@ var Redwing = (function () {
   // trivia and know disguise item and room names for the coded clues (see encodeCryptic).
   var SCENES = [
     {
-      id: "manor", name: "Redwing Manor", at: "at Redwing Manor", guests: "guests",
+      id: "manor", name: "Hawthorne Manor", at: "at Hawthorne Manor", guests: "guests",
       out: { tag: ["Outdoors", "Indoors"], where: ["outdoors", "indoors"],
         shoes: ["'s shoes were caked in mud, so they were outdoors", "'s shoes were spotless, so they stayed indoors"],
         item: ["found outdoors, damp with dew", "kept indoors all night"] },
@@ -681,7 +681,7 @@ var Redwing = (function () {
       chosen = shuffle(chosen, rng);
       chosen = assignSources(encodeCryptic(chosen, S, W, L, rng, theme, X), rng, X);
       // Hints: extra clues unsealed by wrong accusations, weakest first, so the core set alone stays sufficient.
-      var used = {}; chosen.forEach(function (c) { used[c.text] = true; });
+      var used = {}; chosen.forEach(function (c) { used[c.text] = true; used[c.plain] = true; });
       var spare = shuffle(cand.filter(function (c) { return !used[c.text]; }), rng);
       var hints = spare.filter(function (c) { return c.kind === "attr"; }).slice(0, 2)
         .concat(spare.filter(function (c) { return c.kind === "pos"; }).slice(0, 2));

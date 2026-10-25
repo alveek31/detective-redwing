@@ -261,13 +261,13 @@ dialog ol, dialog ul { padding-left: 20px; }
 
 <dialog id="dlgHow">
   <h2>How to play</h2>
-  <p>Every day there is one new case. Some days it is a murder, some days a theft, and the scene moves around: Redwing Manor, the ocean liner SS Aurelia, the Hotel Edelweiss in the Alps and the Silver Arrow night train. Five guests, five items, five rooms. One guest is the culprit.</p>
+  <p>You are Detective Redwing. Every day brings one new case. Some days it is a murder, some days a theft, and the scene moves around: Hawthorne Manor, the ocean liner SS Aurelia, the Hotel Edelweiss in the Alps and the Silver Arrow night train. Five guests, five items, five rooms. One guest is the culprit.</p>
   <ol>
     <li>Read the scene and the evidence. Use the dossier: height, handedness, how heavy an item is, and whether a room is indoors.</li>
     <li>Crack the coded evidence. Each day of the week brings different codes: anagrams, trivia, general knowledge (Merlot and Malbec point to the Wine Cellar), number codes, Morse, mirror writing and shifted-letter notes. Coded notes come with a decoder: you work out which tool cracks it. Anagrams come with letter tiles, and number and Morse codes with a code card.</li>
     <li>Mark your notebook. Each guest pairs with exactly one item and one room. On a phone, the evidence card above the notebook lets you read and mark at the same time, and tapping a clue's number sets it aside once you've used it.</li>
     <li>In a murder, name the killer, the weapon and the room. In a theft, name the thief, the piece they stole and the room they took it from. You have 6 accusations.</li>
-    <li>A wrong accusation tells you nothing except that you were wrong, and unseals a hint.</li>
+    <li>A wrong accusation tells you nothing except that you were wrong, and unseals a hint. If all six miss, the answer is unsealed the next day, once the case has closed in every time zone.</li>
   </ol>
   <p>The opening evidence is always enough: pure logic reaches exactly one answer before any hint. A sharp detective solves it in one.</p>
   <form method="dialog"><button class="btn">Got it</button></form>
@@ -291,9 +291,6 @@ dialog ol, dialog ul { padding-left: 20px; }
 <div class="toast" id="toast" hidden></div>
 
 <script>
-/*ENGINE*/
-</script>
-<script>
 (function () {
   var LAUNCH = "2026-10-20";
   var $ = function (id) { return document.getElementById(id); };
@@ -308,15 +305,49 @@ dialog ol, dialog ul { padding-left: 20px; }
   }
   function list(names) { return names.join(", ").replace(/, ([^,]*)$/, " and $1"); }
   var EMOJI = { manor: "🏰", liner: "🚢", lodge: "🏔️", train: "🚂" };
+  var SIZE = 5;
+  // Letter tools for the decoders. The case engine itself never reaches the browser.
+  function shiftText(text, k) { return text.replace(/[A-Za-z]/g, function (ch) { var b = ch <= "Z" ? 65 : 97; return String.fromCharCode((ch.charCodeAt(0) - b + k) % 26 + b); }); }
+  function atbash(text) { return text.replace(/[A-Za-z]/g, function (ch) { var b = ch <= "Z" ? 65 : 97; return String.fromCharCode(25 - (ch.charCodeAt(0) - b) + b); }); }
+  var MORSE = { A: ".-", B: "-...", C: "-.-.", D: "-..", E: ".", F: "..-.", G: "--.", H: "....", I: "..", J: ".---", K: "-.-", L: ".-..", M: "--",
+    N: "-.", O: "---", P: ".--.", Q: "--.-", R: ".-.", S: "...", T: "-", U: "..-", V: "...-", W: ".--", X: "-..-", Y: "-.--", Z: "--.." };
+
+  // Each case file holds an encrypted lock. Only the right suspect, item and room derive the key that opens it,
+  // and what is inside (the answer, the proof and the decoded clues) is never in the page otherwise.
+  function b64(t) { var bin = atob(t), out = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out; }
+  function unlock(g) {
+    var L = C.lock, enc = new TextEncoder();
+    return crypto.subtle.importKey("raw", enc.encode(C.id + "|" + g.s + "," + g.w + "," + g.l), "PBKDF2", false, ["deriveKey"])
+      .then(function (base) { return crypto.subtle.deriveKey({ name: "PBKDF2", salt: b64(L.salt), iterations: L.iter, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]); })
+      .then(function (k) { return crypto.subtle.decrypt({ name: "AES-GCM", iv: b64(L.iv) }, k, b64(L.data)); })
+      .then(function (buf) { return JSON.parse(new TextDecoder().decode(buf)); }, function () { return null; });
+  }
+  var INDEX = null;
+  function getJSON(url) { return fetch(url, { cache: "no-cache" }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }); }
 
   var today = ymd(new Date());
-  var current = null, C = null, state = null, pick = { s: null, w: null, l: null }, freshIdx = -1, tab = "case", stripAt = 0, prefilled = "";
+  var current = null, C = null, V = null, state = null, busy = false, pick = { s: null, w: null, l: null }, freshIdx = -1, tab = "case", stripAt = 0, prefilled = "";
 
   // Case keys moved to rw3 when cases gained scenes and thefts, so old progress never points at a different case.
   function load(id) {
-    current = id;
-    C = Redwing.generate(id.kind === "daily" ? "daily-" + id.date : "practice-" + id.code);
-    state = store("rw3:case:" + key()) || { guesses: [], notes: {}, aside: {}, done: false, won: false };
+    current = id; C = null; V = null;
+    $("brief").textContent = "Fetching the case file…";
+    setTab("case", true);
+    getJSON("cases/" + key() + ".json").then(function (c) {
+      if (current !== id) return;
+      C = c;
+      state = store("rw3:case:" + key()) || { guesses: [], notes: {}, aside: {}, done: false, won: false };
+      var win = state.guesses.filter(function (g) { return g.hits === 3; })[0];
+      if (C.open) V = C.open;
+      if (V || !win) return start();
+      unlock(win).then(function (v) { V = v; start(); });
+    }, function () {
+      if (current !== id) return;
+      $("brief").textContent = "This case file hasn't arrived yet. Check back in a little while, or open an earlier case from Case files.";
+      $("scene").textContent = "";
+    });
+  }
+  function start() {
     state.aside = state.aside || {};
     pick = { s: null, w: null, l: null }; prefilled = ""; stripAt = 0;
     tab = state.done ? "accuse" : state.guesses.length || Object.keys(state.notes).length ? "notebook" : "case";
@@ -341,9 +372,9 @@ dialog ol, dialog ul { padding-left: 20px; }
       ? "Case No. " + caseNo(current.date) + " · " + new Date(current.date + "T12:00:00").toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long", year: "numeric" })
       : "Practice case " + current.code) + " · " + (theft() ? "Theft" : "Murder") + " · " + C.theme;
     var names = list(S.map(function (s) { return s.name; }));
-    $("brief").textContent = theft()
-      ? "Overnight " + sc.at + ", " + C.victim + " passed five treasures round for the " + sc.guests + " to admire, and by morning one had vanished. The five " + sc.guests + " were " + names + ". Each held one piece and kept to one room. One of them pocketed theirs."
-      : C.victim + " was found dead " + sc.at + ". Five " + sc.guests + " were there that night: " + names + ". Each had one item and kept to one room. One of them is lying.";
+    $("brief").textContent = "A case for Detective Redwing " + sc.at + ". " + (theft()
+      ? "Overnight, " + C.victim + " passed five treasures round for the " + sc.guests + " to admire, and by morning one had vanished. The five " + sc.guests + " were " + names + ". Each held one piece and kept to one room. One of them pocketed theirs."
+      : C.victim + " has been found dead. Five " + sc.guests + " were there that night: " + names + ". Each had one item and kept to one room. One of them is lying.");
     $("scene").textContent = C.murderClue;
     $("dossierTitle").textContent = theft() ? "Who held what, and where" : "Who, with what, and where";
     $("dossierHint").textContent = "Each of the five " + sc.guests + " held exactly one " + (theft() ? "piece" : "item") + " and spent the evening in exactly one room. No two shared either." +
@@ -389,7 +420,8 @@ dialog ol, dialog ul { padding-left: 20px; }
       body.appendChild(el("span", { class: c.cipher ? "ciph" : "", text: c.text }));
       if (c.cipher && !state.done) body.appendChild(folded("Open the decoder", noteDecoder(c)));
       else if (c.puzzle && !state.done) body.appendChild(nameHelper(c.puzzle));
-      if (c.code && state.done) body.appendChild(el("span", { class: "decoded", text: "Decoded" + (c.method ? " (" + c.method + ")" : "") + ": " + c.plain }));
+      var pl = V && state.done && V.plains[i];
+      if (c.code && pl) body.appendChild(el("span", { class: "decoded", text: "Decoded" + (pl.method ? " (" + pl.method + ")" : "") + ": " + pl.plain }));
       var num = el("button", { class: "num", type: "button", "aria-pressed": String(!!state.aside[i]), "aria-label": "Set evidence " + (i + 1) + " aside" });
       num.appendChild(document.createTextNode(state.aside[i] ? "✓" + (i + 1) : "No." + (i + 1)));
       num.appendChild(el("small", { text: state.aside[i] ? "used" : "" }));
@@ -426,8 +458,8 @@ dialog ol, dialog ul { padding-left: 20px; }
     function show() {
       var t = c.text;
       if (st.flip) t = t.split("").reverse().join("");
-      if (st.mirror) t = Redwing.atbash(t);
-      t = Redwing.caesar(t, (26 - st.shift) % 26);
+      if (st.mirror) t = atbash(t);
+      t = shiftText(t, (26 - st.shift) % 26);
       out.textContent = t;
       shiftLbl.textContent = "Shift back " + st.shift;
       mBtn.setAttribute("aria-pressed", String(st.mirror));
@@ -469,7 +501,7 @@ dialog ol, dialog ul { padding-left: 20px; }
       d.appendChild(el("summary", { text: pz.type === "morse" ? "Show the Morse card" : "Show the number card" }));
       var grid = el("div", { class: "keygrid" });
       "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").forEach(function (ch, i) {
-        grid.appendChild(el("span", { text: ch + " " + (pz.type === "morse" ? Redwing.MORSE[ch] : String(i + 1)) }));
+        grid.appendChild(el("span", { text: ch + " " + (pz.type === "morse" ? MORSE[ch] : String(i + 1)) }));
       });
       d.appendChild(grid); tray.appendChild(d);
       return tray;
@@ -483,7 +515,7 @@ dialog ol, dialog ul { padding-left: 20px; }
     var v = state.notes[id] || 0;
     if (v) return v;
     var m = id.match(/^([sl])(\d+)([wl])(\d+)$/), a = m[1], i = +m[2], b = m[3], j = +m[4];
-    for (var k = 0; k < Redwing.SIZE; k++) {
+    for (var k = 0; k < SIZE; k++) {
       if (k !== j && state.notes[a + i + b + k] === 2) return 3;
       if (k !== i && state.notes[a + k + b + j] === 2) return 3;
     }
@@ -545,7 +577,7 @@ dialog ol, dialog ul { padding-left: 20px; }
 
   // Evidence strip: the clues one at a time above the phone notebook, plus any unsealed hints.
   function renderStrip() {
-    var items = C.clues.map(function (c, i) { return { label: "Evidence No." + (i + 1) + (c.code ? " · " + c.code : ""), who: c.speaker, text: state.done && c.code ? c.plain : c.text, aside: state.aside[i] }; });
+    var items = C.clues.map(function (c, i) { return { label: "Evidence No." + (i + 1) + (c.code ? " · " + c.code : ""), who: c.speaker, text: V && state.done && c.code ? V.plains[i].plain : c.text, aside: state.aside[i] }; });
     C.hints.slice(0, hintsOpen()).forEach(function (h, i) { items.push({ label: "Hint " + (i + 1), text: h.text.replace(/^Hint: /, "") }); });
     items.unshift({ label: "The scene", text: C.murderClue });
     stripAt = Math.max(0, Math.min(stripAt, items.length - 1));
@@ -578,7 +610,7 @@ dialog ol, dialog ul { padding-left: 20px; }
     var left = C.attempts - state.guesses.length;
     p.appendChild(el("span", { class: "label", text: left + " left" }));
     $("tabAccuse").textContent = state.done ? "Verdict" : "Accuse · " + left;
-    $("btnAccuse").disabled = pick.s === null || pick.w === null || pick.l === null;
+    $("btnAccuse").disabled = busy || pick.s === null || pick.w === null || pick.l === null;
     var h = $("history"); h.innerHTML = "";
     state.guesses.forEach(function (g, i) {
       var sc = el("span", { class: "score" + (g.hits === 3 ? " hit" : ""), text: g.hits === 3 ? "✓ Correct" : "✗ Wrong" });
@@ -590,7 +622,7 @@ dialog ol, dialog ul { padding-left: 20px; }
     pick[k] = i; prefilled = "";
     if (k === "s") {
       var got = [];
-      for (var j = 0; j < Redwing.SIZE; j++) {
+      for (var j = 0; j < SIZE; j++) {
         if (state.notes["s" + i + "w" + j] === 2) { pick.w = j; got.push(C.weapons[j].name); }
         if (state.notes["s" + i + "l" + j] === 2) { pick.l = j; got.push(C.locations[j].name); }
       }
@@ -606,27 +638,32 @@ dialog ol, dialog ul { padding-left: 20px; }
   function caseTag() { return current.kind === "daily" ? "case-" + caseNo(current.date) : "practice"; }
 
   function accuse() {
-    if (state.done) return;
-    var a = C.answer;
-    var hits = (pick.s === a.s) + (pick.w === a.w) + (pick.l === a.l);
-    state.guesses.push({ s: pick.s, w: pick.w, l: pick.l, hits: hits });
-    if (state.guesses.length === 1) track("started/" + caseTag());
-    if (hits === 3) { state.done = true; state.won = true; }
-    else if (state.guesses.length >= C.attempts) { state.done = true; }
-    var idx = state.guesses.length - 1, unsealed = !state.done && idx < C.hints.length;
-    if (!state.done) {
-      if (unsealed) freshIdx = idx;
-      toast("Wrong. " + (unsealed ? "A hint has been unsealed." : "No hints left."));
-    }
-    save();
-    if (state.done) { recordResult(); track((state.won ? "solved/" : "failed/") + caseTag() + (state.won ? "/in-" + state.guesses.length : "")); }
-    pick = { s: null, w: null, l: null }; prefilled = "";
-    if (state.done) tab = "accuse";
-    else if (unsealed && matchMedia("(max-width: 720px)").matches) tab = "evidence";
-    render();
-    freshIdx = -1;
-    if (state.done) $("verdict").scrollIntoView({ behavior: "smooth", block: "start" });
-    else if (unsealed && tab === "evidence") $("hint" + idx).scrollIntoView({ behavior: "smooth", block: "center" });
+    if (state.done || busy) return;
+    var g = { s: pick.s, w: pick.w, l: pick.l };
+    busy = true; $("btnAccuse").disabled = true; $("btnAccuse").textContent = "Checking…";
+    unlock(g).then(function (v) {
+      busy = false; $("btnAccuse").textContent = "Make accusation";
+      var hits = v ? 3 : 0;
+      if (v) V = v;
+      state.guesses.push({ s: g.s, w: g.w, l: g.l, hits: hits });
+      if (state.guesses.length === 1) track("started/" + caseTag());
+      if (hits === 3) { state.done = true; state.won = true; }
+      else if (state.guesses.length >= C.attempts) { state.done = true; }
+      var idx = state.guesses.length - 1, unsealed = !state.done && idx < C.hints.length;
+      if (!state.done) {
+        if (unsealed) freshIdx = idx;
+        toast("Wrong. " + (unsealed ? "A hint has been unsealed." : "No hints left."));
+      }
+      save();
+      if (state.done) { recordResult(); track((state.won ? "solved/" : "failed/") + caseTag() + (state.won ? "/in-" + state.guesses.length : "")); }
+      pick = { s: null, w: null, l: null }; prefilled = "";
+      if (state.done) tab = "accuse";
+      else if (unsealed && matchMedia("(max-width: 720px)").matches) tab = "evidence";
+      render();
+      freshIdx = -1;
+      if (state.done) $("verdict").scrollIntoView({ behavior: "smooth", block: "start" });
+      else if (unsealed && tab === "evidence") $("hint" + idx).scrollIntoView({ behavior: "smooth", block: "center" });
+    });
   }
 
   function recordResult() {
@@ -653,20 +690,28 @@ dialog ol, dialog ul { padding-left: 20px; }
     var v = $("verdict");
     v.hidden = !state.done; v.innerHTML = "";
     if (!state.done) return;
-    var a = C.answer, S = C.suspects, W = C.weapons, L = C.locations;
+    var S = C.suspects, W = C.weapons, L = C.locations;
     v.className = "verdict" + (state.won ? " won" : "");
     v.appendChild(el("div", { class: "stamp", text: state.won ? "✓ Correct · Case closed" : "✗ Case gone cold" }));
+    if (!V) {
+      // Unsolved daily case: the answer stays locked until the date is over everywhere, so nobody can look it up.
+      v.appendChild(el("h2", { text: "Six accusations and no confession." }));
+      v.appendChild(el("p", { text: "Detective Redwing will have to wait. The answer and how logic gets there are unsealed once this case has closed in every time zone, by midday UTC the day after. Come back then through Case files." }));
+      v.appendChild(el("pre", { class: "share", text: shareText() }));
+      return;
+    }
+    var a = V.answer;
     v.appendChild(el("h2", { text: theft() ? S[a.s].name + " stole the " + W[a.w].name + " from the " + L[a.l].name + "."
       : S[a.s].name + ", with the " + W[a.w].name + ", in the " + L[a.l].name + "." }));
     var named = theft() ? "the thief, the stolen piece and the room" : "the killer, the weapon and the room";
-    v.appendChild(el("p", { text: state.won ? "You named " + named + ". Solved on accusation " + state.guesses.length + " of " + C.attempts + (state.guesses.length === 1 ? ", by pure deduction." : ".") : "Six accusations and no confession. Here is the answer, and how logic gets there." }));
+    v.appendChild(el("p", { text: state.won ? "Well done, Detective Redwing. You named " + named + ". Solved on accusation " + state.guesses.length + " of " + C.attempts + (state.guesses.length === 1 ? ", by pure deduction." : ".") : "Six accusations and no confession. Here is the answer, and how logic gets there." }));
     v.appendChild(el("span", { class: "label", text: "How the evidence proves it" }));
     var wl = el("ol", { class: "walk" });
     function factText(f) {
       var m = f.match(/^([wl])(\d+):(\d+)$/), who = S[+m[2]].name;
       return m[1] === "w" ? who + " had the " + W[+m[3]].name : who + " was in the " + L[+m[3]].name;
     }
-    C.steps.forEach(function (st, i) {
+    V.steps.forEach(function (st, i) {
       var t = "Evidence No." + (i + 1) + ": " + (st.facts.length ? "so " + st.facts.map(factText).join("; ") + ". " : "") +
         (st.left === 1 ? "Only one answer is left." : st.left + " possible answers remain.");
       wl.appendChild(el("li", { text: t }));
@@ -676,7 +721,7 @@ dialog ol, dialog ul { padding-left: 20px; }
     var tb = el("table", { class: "sol" });
     tb.appendChild(el("tr", {}, [el("th", { text: "Guest" }), el("th", { text: theft() ? "Piece" : "Item" }), el("th", { text: "Room" })]));
     S.forEach(function (s, i) {
-      tb.appendChild(el("tr", { class: i === a.s ? "killer" : "" }, [el("td", { text: s.name }), el("td", { text: W[C.solution.w[i]].name }), el("td", { text: L[C.solution.l[i]].name })]));
+      tb.appendChild(el("tr", { class: i === a.s ? "killer" : "" }, [el("td", { text: s.name }), el("td", { text: W[V.solution.w[i]].name }), el("td", { text: L[V.solution.l[i]].name })]));
     });
     v.appendChild(tb);
     var pre = el("pre", { class: "share", text: shareText() });
@@ -712,20 +757,22 @@ dialog ol, dialog ul { padding-left: 20px; }
     $("dlgStats").showModal();
   }
   function openCases() {
+    if (!INDEX) { getJSON("cases/index.json").then(function (x) { INDEX = x; openCases(); }, function () { toast("Couldn't fetch the case files. Try again in a moment."); }); return; }
     var a = $("archive"); a.innerHTML = "";
     for (var i = 0; i < 7; i++) {
       var d = new Date(); d.setDate(d.getDate() - i); var date = ymd(d);
       if (caseNo(date) < 1) break;
-      var st = store("rw3:case:" + date), cc = Redwing.generate("daily-" + date);
+      var st = store("rw3:case:" + date), cc = INDEX.daily[date];
+      if (!cc) continue;
       var mark = st && st.done ? (st.won ? " · solved in " + st.guesses.length : " · unsolved") : st && st.guesses.length ? " · in progress" : "";
       (function (date) {
-        var b = el("button", { class: "btn", text: "Case No. " + caseNo(date) + (i === 0 ? " (today)" : " · " + date) + " · " + (EMOJI[cc.scene.id] || "") + " " + (cc.type === "theft" ? "Theft" : "Murder") + mark });
+        var b = el("button", { class: "btn", text: "Case No. " + caseNo(date) + (i === 0 ? " (today)" : " · " + date) + " · " + (EMOJI[cc.scene] || "") + " " + (cc.type === "theft" ? "Theft" : "Murder") + mark });
         b.addEventListener("click", function () { $("dlgCases").close(); load({ kind: "daily", date: date }); scrollTo(0, 0); });
         a.appendChild(b);
       })(date);
     }
     var pr = el("button", { class: "btn", text: "Open a random practice case" });
-    pr.addEventListener("click", function () { $("dlgCases").close(); load({ kind: "practice", code: Math.random().toString(36).slice(2, 7).toUpperCase() }); scrollTo(0, 0); });
+    pr.addEventListener("click", function () { $("dlgCases").close(); load({ kind: "practice", code: INDEX.practice[Math.floor(Math.random() * INDEX.practice.length)] }); scrollTo(0, 0); });
     a.appendChild(pr);
     $("dlgCases").showModal();
   }

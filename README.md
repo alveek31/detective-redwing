@@ -6,14 +6,15 @@ Daily puzzle games at [brainbrew.fun](https://brainbrew.fun). The home page is `
 
 A daily logic mystery. Five guests, five items, five rooms, one culprit, six accusations. Some days it is a murder (name the killer, weapon and room), some days a theft (name the thief, the stolen piece and the room).
 
-- `src/engine.js` builds each day's case from the date and proves it has exactly one answer.
+- `src/engine.js` builds each day's case from the date and proves it has exactly one answer. It runs only at build time.
+- `build.js` writes `dist/redwing/cases/<date>.json` for the past week and the next three days, plus 40 practice cases. A case file holds the clues and an AES-GCM lock keyed (PBKDF2, 300k rounds) by the correct suspect, item and room, so the answer, the proof and the decoded clues are not in the page. A daily case's answer is added in plain form once its date has ended in every time zone (noon UTC the next day); the 12:30 UTC build publishes it.
 - `src/app.html` is the game page.
-- `npm test` checks 500 daily cases plus every scene and case type for a unique answer. `npm run build` writes `dist/index.html` (home) and `dist/redwing/index.html`.
+- `npm test` checks 500 daily cases plus every scene and case type, and that case files leak no answer and open only for the right accusation for a unique answer. `npm run build` writes `dist/index.html` (home) and `dist/redwing/index.html`.
 - Every push to `main` (and a nightly run) tests, builds and deploys to GitHub Pages.
 
 ## Daily variety
 
-Scenes rotate by date (see `SCENES` in `src/engine.js`): Redwing Manor, the SS Aurelia ocean liner, the Hotel Edelweiss in the Alps and the Silver Arrow night train, each with its own guests, weapons, rooms, staff and witnesses. The same scene never runs two days in a row. Every two days hold one murder and one theft, in a random order. Thefts use the shared `VALUABLES` instead of weapons, and their scene clue never names the stolen piece.
+Scenes rotate by date (see `SCENES` in `src/engine.js`): Hawthorne Manor, the SS Aurelia ocean liner, the Hotel Edelweiss in the Alps and the Silver Arrow night train, each with its own guests, weapons, rooms, staff and witnesses. The same scene never runs two days in a row. Every two days hold one murder and one theft, in a random order. Thefts use the shared `VALUABLES` instead of weapons, and their scene clue never names the stolen piece.
 
 On phones the page turns into four tabs (Case, Evidence, Notebook, Accuse) with a notebook card per guest and an evidence strip above it.
 
