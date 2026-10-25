@@ -719,6 +719,14 @@ var Redwing = (function () {
     throw new Error("Could not build a case for seed " + seed);
   }
 
-  return { generate: generate, SCENES: SCENES.map(function (x) { return x.id; }), SIZE: SIZE, ATTEMPTS: ATTEMPTS, caesar: caesar, atbash: atbash, MORSE: MORSE };
+  // Case seeds mix in a secret kept out of the repo (a GitHub Actions and Worker secret), so nobody can rebuild
+  // the answers from this public code. Ids are a date ("2026-10-25") or a practice code ("p-1A2B3").
+  function seedFor(secret, id) { return (secret || "") + "|" + (/^p-/.test(id) ? "practice-" + id.slice(2) : "daily-" + id); }
+  // What stays locked until the case is solved or lost: the answer, the proof and the decoded clues.
+  function secretOf(c) {
+    return { answer: c.answer, solution: c.solution, steps: c.steps, plains: c.clues.map(function (x) { return { plain: x.plain, method: x.method }; }) };
+  }
+
+  return { generate: generate, seedFor: seedFor, secretOf: secretOf, SCENES: SCENES.map(function (x) { return x.id; }), SIZE: SIZE, ATTEMPTS: ATTEMPTS, caesar: caesar, atbash: atbash, MORSE: MORSE };
 })();
 if (typeof module !== "undefined") module.exports = Redwing;

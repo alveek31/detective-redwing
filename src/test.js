@@ -39,7 +39,7 @@ const B = require('../build.js');
 let leaks = 0;
 for (let d = 0; d < 6; d++) {
   const date = new Date(Date.UTC(2026, 9, 20 + d)).toISOString().slice(0, 10);
-  const full = R.generate('daily-' + date), pc = B.makeCase(date, 'daily-' + date, false, 2000), txt = JSON.stringify(pc);
+  const full = R.generate(R.seedFor('test-secret', date)), pc = B.makeCase(date, false, 2000, 'test-secret'), txt = JSON.stringify(pc);
   if (/"answer"|"solution"|"steps"|"plain"|"method"|"open"/.test(txt)) { leaks++; console.log('field leak', date); }
   full.clues.forEach((x) => { if (x.code && txt.includes(x.plain)) { leaks++; console.log('decoded clue leak', date); } });
   let opened = 0;

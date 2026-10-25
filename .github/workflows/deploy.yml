@@ -26,9 +26,30 @@ jobs:
           node-version: 22
       - run: npm test
       - run: npm run build
+        env:
+          REDWING_SECRET: ${{ secrets.REDWING_SECRET }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
       - id: deployment
         uses: actions/deploy-pages@v4
+  # The answer desk: a Cloudflare Worker that hands out the answer after six wrong accusations.
+  # Skipped until CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID are added as repository secrets.
+  answer-desk:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'schedule'
+    env:
+      HAS_CF: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+    steps:
+      - uses: actions/checkout@v4
+        if: env.HAS_CF == 'true'
+      - uses: cloudflare/wrangler-action@v3
+        if: env.HAS_CF == 'true'
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: worker
+          secrets: REDWING_SECRET
+        env:
+          REDWING_SECRET: ${{ secrets.REDWING_SECRET }}

@@ -7,6 +7,7 @@
   },
   "config": {
     "cloudflareBeacon": "54fb48281c62456da59255d39e2ef3a9",
-    "goatcounter": "brainbrew"
+    "goatcounter": "brainbrew",
+    "answerDesk": "https://api.brainbrew.fun/redwing"
   }
 }

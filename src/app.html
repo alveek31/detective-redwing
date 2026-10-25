@@ -267,7 +267,7 @@ dialog ol, dialog ul { padding-left: 20px; }
     <li>Crack the coded evidence. Each day of the week brings different codes: anagrams, trivia, general knowledge (Merlot and Malbec point to the Wine Cellar), number codes, Morse, mirror writing and shifted-letter notes. Coded notes come with a decoder: you work out which tool cracks it. Anagrams come with letter tiles, and number and Morse codes with a code card.</li>
     <li>Mark your notebook. Each guest pairs with exactly one item and one room. On a phone, the evidence card above the notebook lets you read and mark at the same time, and tapping a clue's number sets it aside once you've used it.</li>
     <li>In a murder, name the killer, the weapon and the room. In a theft, name the thief, the piece they stole and the room they took it from. You have 6 accusations.</li>
-    <li>A wrong accusation tells you nothing except that you were wrong, and unseals a hint. If all six miss, the answer is unsealed the next day, once the case has closed in every time zone.</li>
+    <li>A wrong accusation tells you nothing except that you were wrong, and unseals a hint. If all six miss, you see the answer and how logic gets there.</li>
   </ol>
   <p>The opening evidence is always enough: pure logic reaches exactly one answer before any hint. A sharp detective solves it in one.</p>
   <form method="dialog"><button class="btn">Got it</button></form>
@@ -322,7 +322,20 @@ dialog ol, dialog ul { padding-left: 20px; }
       .then(function (k) { return crypto.subtle.decrypt({ name: "AES-GCM", iv: b64(L.iv) }, k, b64(L.data)); })
       .then(function (buf) { return JSON.parse(new TextDecoder().decode(buf)); }, function () { return null; });
   }
-  var INDEX = null;
+  var INDEX = null, ANSWER_DESK = "/*ANSWER_DESK*/", asking = false, deskFailed = false;
+  // After six wrong accusations on a daily case, the answer desk (a small server) checks the six guesses and sends
+  // the answer back, so it never has to sit in the page. It is kept with the case so it only has to be asked once.
+  function askDesk() {
+    if (asking || V || deskFailed) return;
+    if (!ANSWER_DESK || ANSWER_DESK.indexOf("/*") === 0) { deskFailed = true; return; }
+    asking = true;
+    var mine = current;
+    fetch(ANSWER_DESK + "/reveal", { method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ date: current.date, guesses: state.guesses.map(function (g) { return { s: g.s, w: g.w, l: g.l }; }) }) })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (v) { asking = false; if (current !== mine) return; V = v; state.reveal = v; save(); render(); },
+        function () { asking = false; if (current !== mine) return; deskFailed = true; renderVerdict(); });
+  }
   function getJSON(url) { return fetch(url, { cache: "no-cache" }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }); }
 
   var today = ymd(new Date());
@@ -339,6 +352,7 @@ dialog ol, dialog ul { padding-left: 20px; }
       state = store("rw3:case:" + key()) || { guesses: [], notes: {}, aside: {}, done: false, won: false };
       var win = state.guesses.filter(function (g) { return g.hits === 3; })[0];
       if (C.open) V = C.open;
+      else if (state.reveal) V = state.reveal;
       if (V || !win) return start();
       unlock(win).then(function (v) { V = v; start(); });
     }, function () {
@@ -694,9 +708,16 @@ dialog ol, dialog ul { padding-left: 20px; }
     v.className = "verdict" + (state.won ? " won" : "");
     v.appendChild(el("div", { class: "stamp", text: state.won ? "✓ Correct · Case closed" : "✗ Case gone cold" }));
     if (!V) {
-      // Unsolved daily case: the answer stays locked until the date is over everywhere, so nobody can look it up.
+      // Unsolved daily case: fetch the answer from the answer desk. If it can't be reached, the case file carries
+      // the answer anyway from midday UTC the next day.
+      askDesk();
       v.appendChild(el("h2", { text: "Six accusations and no confession." }));
-      v.appendChild(el("p", { text: "Detective Redwing will have to wait. The answer and how logic gets there are unsealed once this case has closed in every time zone, by midday UTC the day after. Come back then through Case files." }));
+      v.appendChild(el("p", { text: deskFailed ? "Detective Redwing couldn't reach the records office for the answer just now. Try again, or reopen this case from Case files tomorrow." : "Opening the case file for the answer…" }));
+      if (deskFailed) {
+        var again = el("button", { class: "btn", text: "Try again" });
+        again.addEventListener("click", function () { deskFailed = false; renderVerdict(); });
+        v.appendChild(again);
+      }
       v.appendChild(el("pre", { class: "share", text: shareText() }));
       return;
     }
