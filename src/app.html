@@ -127,6 +127,11 @@ section { display: flex; flex-direction: column; gap: 12px; }
 .verdict.won .stamp { border-color: var(--good); color: var(--good); }
 .walk { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
 .share { font: 400 14px/1.5 var(--mono); background: var(--paper); border: 1px dashed var(--line); padding: 10px 12px; white-space: pre-wrap; margin: 0; }
+.sharebox { display: flex; flex-direction: column; gap: 10px; }
+.sharerow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.sharerow .btn { text-decoration: none; color: inherit; display: inline-flex; align-items: center; min-height: 44px; }
+.sharerow .btn.primary { color: var(--accent-ink); }
+@media (max-width: 720px) { .sharerow .btn.primary { flex-basis: 100%; justify-content: center; min-height: 52px; } }
 .sol { border-collapse: collapse; width: 100%; font-size: 14px; }
 .sol td, .sol th { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
 .sol tr.killer { color: var(--accent); font-weight: 600; }
@@ -694,10 +699,40 @@ dialog ol, dialog ul { padding-left: 20px; }
     store("rw2:stats", st);
   }
 
+  // Spoiler-free result: case number, scene and case type, then one square per accusation.
+  var SITE = "https://brainbrew.fun/redwing/";
   function shareText() {
     var row = state.guesses.map(function (g) { return g.hits === 3 ? "🟩" : "🟥"; }).join("");
     var head = "🕵️ Detective Redwing " + (current.kind === "daily" ? "#" + caseNo(current.date) : "practice") + " " + (EMOJI[C.scene.id] || "") + (theft() ? "💎" : "🔪") + " " + (state.won ? state.guesses.length : "X") + "/" + C.attempts;
     return head + "\n" + row;
+  }
+  // The result card plus buttons: the phone's own share sheet where there is one (it lists the player's apps),
+  // direct links for X and WhatsApp, and copy as the fallback everywhere.
+  function shareBox() {
+    var txt = shareText(), full = txt + "\n" + SITE, box = el("div", { class: "sharebox" });
+    var pre = el("pre", { class: "share", text: full });
+    function copy() {
+      try { navigator.clipboard.writeText(full).then(function () { toast("Copied. Paste it anywhere."); }, function () { selectPre(pre); }); }
+      catch (e) { selectPre(pre); }
+    }
+    var native = !!navigator.share;
+    var main = el("button", { class: "btn primary", type: "button", text: native ? "Share result" : "Copy result" });
+    main.addEventListener("click", function () {
+      track("shared/" + caseTag());
+      if (!native) return copy();
+      navigator.share({ text: txt, url: SITE }).catch(function (e) { if (!e || e.name !== "AbortError") copy(); });
+    });
+    function link(label, href) {
+      var a = el("a", { class: "btn", href: href, target: "_blank", rel: "noopener", text: label });
+      a.addEventListener("click", function () { track("shared/" + caseTag()); });
+      return a;
+    }
+    var row = el("div", { class: "sharerow" }, [main,
+      link("Post on X", "https://twitter.com/intent/tweet?text=" + encodeURIComponent(full)),
+      link("WhatsApp", "https://wa.me/?text=" + encodeURIComponent(full))]);
+    if (native) { var c = el("button", { class: "btn", type: "button", text: "Copy" }); c.addEventListener("click", copy); row.appendChild(c); }
+    box.appendChild(pre); box.appendChild(row);
+    return box;
   }
 
   function renderVerdict() {
@@ -718,7 +753,7 @@ dialog ol, dialog ul { padding-left: 20px; }
         again.addEventListener("click", function () { deskFailed = false; renderVerdict(); });
         v.appendChild(again);
       }
-      v.appendChild(el("pre", { class: "share", text: shareText() }));
+      v.appendChild(shareBox());
       return;
     }
     var a = V.answer;
@@ -726,6 +761,8 @@ dialog ol, dialog ul { padding-left: 20px; }
       : S[a.s].name + ", with the " + W[a.w].name + ", in the " + L[a.l].name + "." }));
     var named = theft() ? "the thief, the stolen piece and the room" : "the killer, the weapon and the room";
     v.appendChild(el("p", { text: state.won ? "Well done, Detective Redwing. You named " + named + ". Solved on accusation " + state.guesses.length + " of " + C.attempts + (state.guesses.length === 1 ? ", by pure deduction." : ".") : "Six accusations and no confession. Here is the answer, and how logic gets there." }));
+    v.appendChild(shareBox());
+    if (current.kind === "daily" && current.date === today) v.appendChild(el("span", { class: "hint", text: "A new case opens at midnight." }));
     v.appendChild(el("span", { class: "label", text: "How the evidence proves it" }));
     var wl = el("ol", { class: "walk" });
     function factText(f) {
@@ -745,19 +782,6 @@ dialog ol, dialog ul { padding-left: 20px; }
       tb.appendChild(el("tr", { class: i === a.s ? "killer" : "" }, [el("td", { text: s.name }), el("td", { text: W[V.solution.w[i]].name }), el("td", { text: L[V.solution.l[i]].name })]));
     });
     v.appendChild(tb);
-    var pre = el("pre", { class: "share", text: shareText() });
-    v.appendChild(pre);
-    var row = el("div", { class: "actions" });
-    var copy = el("button", { class: "btn primary", text: "Copy result" });
-    copy.addEventListener("click", function () {
-      var txt = shareText();
-      try {
-        navigator.clipboard.writeText(txt).then(function () { toast("Copied. Paste it anywhere."); }, function () { selectPre(pre); });
-      } catch (e) { selectPre(pre); }
-    });
-    row.appendChild(copy);
-    if (current.kind === "daily" && current.date === today) row.appendChild(el("span", { class: "hint", text: "A new case opens at midnight." }));
-    v.appendChild(row);
   }
   function selectPre(pre) { var r = document.createRange(); r.selectNodeContents(pre); var s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("Press copy to grab the selected result."); }
 
