@@ -10,6 +10,9 @@ function check(seed, opts) {
   if (JSON.stringify(R.generate(seed, opts).clues) !== JSON.stringify(c.clues)) { fail++; console.log('not stable', seed, opts); }
   // a theft never names the stolen piece in the scene clue
   if (c.type === 'theft' && c.murderType === 'weapon') { fail++; console.log('theft names the piece', seed); }
+  // every case has its own cast: five different surnames, none of them Redwing
+  const sur = c.suspects.map((p) => p.name.split(' ').pop()).concat([c.victim.split(' ').pop()]);
+  if (new Set(sur).size !== 6 || sur.includes('Redwing')) { fail++; console.log('bad cast', seed); }
   if (/undefined/.test(JSON.stringify(c.clues) + JSON.stringify(c.hints) + c.murderClue)) { fail++; console.log('undefined text', seed, opts); }
   dist[c.clues.length] = (dist[c.clues.length] || 0) + 1;
   return c;
