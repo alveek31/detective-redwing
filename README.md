@@ -14,7 +14,7 @@ A daily logic mystery. Five guests, five items, five rooms, one culprit, six acc
 
 ## Daily variety
 
-Scenes rotate by date (see `SCENES` in `src/engine.js`): Hawthorne Manor, the SS Aurelia ocean liner, the Hotel Edelweiss in the Alps and the Silver Arrow night train, each with its own guests, weapons, rooms, staff and witnesses. The same scene never runs two days in a row. Every two days hold one murder and one theft, in a random order. Thefts use the shared `VALUABLES` instead of weapons, and their scene clue never names the stolen piece.
+Scenes rotate by date (see `SCENES` in `src/engine.js`): Hawthorne Manor, the SS Aurelia ocean liner, the Hotel Edelweiss in the Alps and the Silver Arrow night train, each with its own roles, weapons, rooms, staff and witnesses. Every case draws a fresh cast (a scene role, a fitting title and a surname from `SURNAMES`), so Detective Redwing is the only recurring character. The same scene never runs two days in a row. Every two days hold one murder and one theft, in a random order. Thefts use the shared `VALUABLES` instead of weapons, and their scene clue never names the stolen piece.
 
 On phones the page turns into four tabs (Case, Evidence, Notebook, Accuse) with a notebook card per guest and an evidence strip above it.
 

@@ -10,16 +10,15 @@ var Redwing = (function () {
         shoes: ["'s shoes were caked in mud, so they were outdoors", "'s shoes were spotless, so they stayed indoors"],
         item: ["found outdoors, damp with dew", "kept indoors all night"] },
       groups: { household: "What the household told you", witness: "What others told you" },
-      suspects: [
-        { name: "Lady Vesper", tall: true, left: false, role: "the widowed aunt" },
-        { name: "Dr. Thorne", tall: true, left: true, role: "the family physician" },
-        { name: "Miss Hollis", tall: false, left: false, role: "the governess" },
-        { name: "Captain Grey", tall: true, left: false, role: "a retired naval officer" },
-        { name: "Reverend Ashby", tall: false, left: true, role: "the village vicar" },
-        { name: "Madame Lark", tall: false, left: false, role: "a touring soprano" },
-        { name: "Mr. Fennick", tall: false, left: true, role: "the estate solicitor" },
-        { name: "Professor Quill", tall: true, left: true, role: "an amateur chemist" }
+      cast: [
+        { role: "the widowed aunt", titles: ["Lady", "Mrs."] }, { role: "the family physician", titles: ["Dr."] },
+        { role: "the governess", titles: ["Miss"] }, { role: "a retired naval officer", titles: ["Captain", "Commander"] },
+        { role: "the village vicar", titles: ["Reverend"] }, { role: "a touring soprano", titles: ["Madame", "Miss"] },
+        { role: "the estate solicitor", titles: ["Mr.", "Mrs."] }, { role: "an amateur chemist", titles: ["Professor", "Dr."] },
+        { role: "a society portrait painter", titles: ["Mr.", "Miss"] }, { role: "a horse breeder", titles: ["Major", "Mrs."] },
+        { role: "a family friend from London", titles: ["Sir", "Lady"] }, { role: "the black-sheep nephew", titles: ["Mr."] }
       ],
+      victimTitles: ["Lord", "Lady", "Sir", "Mrs.", "Colonel", "Baroness", "Mr.", "Judge"],
       weapons: [
         { name: "Candlestick", heavy: true }, { name: "Letter Opener", heavy: false },
         { name: "Revolver", heavy: false }, { name: "Poison Vial", heavy: false },
@@ -32,8 +31,6 @@ var Redwing = (function () {
         { name: "Garden Maze", outdoor: true }, { name: "Stables", outdoor: true },
         { name: "Boathouse", outdoor: true }, { name: "Orchard", outdoor: true }
       ],
-      victims: ["Lord Ashcombe", "Sir Edmund Pryce", "Mrs. Delacourt", "Colonel Hartley",
-        "Baroness Wren", "Mr. Silas Mott", "Lady Imogen Crane", "Judge Albright"],
       staff: ["The butler", "The cook", "The footman", "A housemaid", "The chauffeur", "The head gardener"],
       witnesses: ["The village constable", "A passing postman", "The vicar's wife", "A neighbouring farmer", "The station porter", "The doctor's receptionist"],
       trivia: {
@@ -80,16 +77,15 @@ var Redwing = (function () {
         shoes: ["'s coat was damp with salt spray, so they were out on deck", "'s coat was bone dry, so they stayed inside the ship"],
         item: ["found out on deck, crusted with salt", "kept inside the ship all night"] },
       groups: { household: "What the crew told you", witness: "What other passengers told you" },
-      suspects: [
-        { name: "Countess Orlova", tall: true, left: false, role: "a Russian émigré" },
-        { name: "Mr. Bancroft", tall: true, left: true, role: "an American oil heir" },
-        { name: "Miss Penrose", tall: false, left: false, role: "a lady's companion" },
-        { name: "Commander Hale", tall: true, left: false, role: "the ship's first officer" },
-        { name: "Father Doyle", tall: false, left: true, role: "a travelling priest" },
-        { name: "Signora Vitale", tall: false, left: false, role: "a fashion designer" },
-        { name: "Mr. Okafor", tall: false, left: true, role: "a marine insurer" },
-        { name: "Dr. Lindqvist", tall: true, left: true, role: "the ship's surgeon" }
+      cast: [
+        { role: "a Russian émigré", titles: ["Countess", "Count"] }, { role: "an American oil heir", titles: ["Mr.", "Miss"] },
+        { role: "a lady's companion", titles: ["Miss"] }, { role: "the ship's first officer", titles: ["Commander"] },
+        { role: "a travelling priest", titles: ["Father"] }, { role: "a fashion designer", titles: ["Signora", "Madame"] },
+        { role: "a marine insurer", titles: ["Mr.", "Mrs."] }, { role: "the ship's surgeon", titles: ["Dr."] },
+        { role: "a big-game hunter", titles: ["Major", "Lady"] }, { role: "a film starlet", titles: ["Miss"] },
+        { role: "a jewel dealer", titles: ["Monsieur", "Mr."] }, { role: "a honeymooning banker", titles: ["Mr.", "Mrs."] }
       ],
+      victimTitles: ["Mr.", "Lady", "Baron", "Mrs.", "Dame", "Sir", "Countess"],
       weapons: [
         { name: "Boat Hook", heavy: true }, { name: "Flare Gun", heavy: false },
         { name: "Champagne Bottle", heavy: true }, { name: "Sextant", heavy: true },
@@ -102,8 +98,6 @@ var Redwing = (function () {
         { name: "Promenade Deck", outdoor: true }, { name: "Sun Deck", outdoor: true },
         { name: "Lifeboat Station", outdoor: true }, { name: "Crow's Nest", outdoor: true }
       ],
-      victims: ["Mr. Cornelius Vance", "Lady Margot Steyne", "Baron von Halden", "Mrs. Ada Whitcombe",
-        "Mr. Julius Pell", "Dame Honoria Fisk"],
       staff: ["The chief steward", "A cabin boy", "The ship's cook", "A stewardess", "The bosun", "The radio officer"],
       witnesses: ["A deckhand", "A fellow passenger", "The ship's photographer", "The bandleader", "A honeymooning bride", "A card player"],
       trivia: {
@@ -149,16 +143,15 @@ var Redwing = (function () {
         shoes: ["'s boots were wet with melted snow, so they were outside", "'s boots were dry, so they stayed inside the hotel"],
         item: ["found outside, frosted over", "kept inside the hotel all night"] },
       groups: { household: "What the hotel staff told you", witness: "What others told you" },
-      suspects: [
-        { name: "Baroness Kessler", tall: true, left: false, role: "a Viennese art patron" },
-        { name: "Herr Brandt", tall: true, left: true, role: "the ski instructor" },
-        { name: "Miss Calloway", tall: false, left: false, role: "a champion figure skater" },
-        { name: "Monsieur Duval", tall: false, left: true, role: "a Geneva banker" },
-        { name: "Colonel Ashdown", tall: true, left: false, role: "a veteran mountaineer" },
-        { name: "Frau Weber", tall: false, left: false, role: "the hotel's owner" },
-        { name: "Mr. Takeda", tall: true, left: true, role: "a travelling photographer" },
-        { name: "Dr. Marchetti", tall: false, left: true, role: "a sanatorium doctor" }
+      cast: [
+        { role: "a Viennese art patron", titles: ["Baroness", "Baron"] }, { role: "the ski instructor", titles: ["Herr", "Frau"] },
+        { role: "a champion figure skater", titles: ["Miss"] }, { role: "a Geneva banker", titles: ["Monsieur", "Madame"] },
+        { role: "a veteran mountaineer", titles: ["Colonel", "Captain"] }, { role: "the hotel's owner", titles: ["Frau", "Herr"] },
+        { role: "a travelling photographer", titles: ["Mr.", "Miss"] }, { role: "a sanatorium doctor", titles: ["Dr."] },
+        { role: "a celebrated composer", titles: ["Maestro"] }, { role: "a bobsleigh champion", titles: ["Mr.", "Miss"] },
+        { role: "an exiled prince", titles: ["Prince"] }, { role: "a glaciologist", titles: ["Professor", "Dr."] }
       ],
+      victimTitles: ["Herr", "Madame", "Sir", "Mrs.", "Count", "Miss", "Baroness"],
       weapons: [
         { name: "Ice Axe", heavy: true }, { name: "Ski Pole", heavy: false },
         { name: "Fondue Fork", heavy: false }, { name: "Cowbell", heavy: true },
@@ -171,8 +164,6 @@ var Redwing = (function () {
         { name: "Ski Slope", outdoor: true }, { name: "Ice Rink", outdoor: true },
         { name: "Chairlift", outdoor: true }, { name: "Hot Spring", outdoor: true }
       ],
-      victims: ["Herr Otto Reinhardt", "Madame Celeste Fournier", "Sir Rupert Calder", "Mrs. Helena Strand",
-        "Count Emil Varga", "Miss Priscilla Dunmore"],
       staff: ["The concierge", "A chambermaid", "The head chef", "The night porter", "The barman", "A bellhop"],
       witnesses: ["A mountain guide", "The lift operator", "A ski patroller", "A fellow guest", "The village postmistress", "A sleigh driver"],
       trivia: {
@@ -218,16 +209,15 @@ var Redwing = (function () {
         shoes: ["'s collar was flecked with soot and cinders, so they were out in the open air", "'s collar was spotless, so they stayed inside the carriages"],
         item: ["found out in the open, gritty with soot", "kept inside the carriages all night"] },
       groups: { household: "What the train crew told you", witness: "What other passengers told you" },
-      suspects: [
-        { name: "Princess Amara", tall: true, left: false, role: "an exiled royal" },
-        { name: "Mr. Whitlock", tall: true, left: true, role: "a diamond merchant" },
-        { name: "Miss Darrow", tall: false, left: false, role: "a crime novelist" },
-        { name: "General Petrov", tall: true, left: false, role: "a retired general" },
-        { name: "Sister Agnes", tall: false, left: true, role: "a nursing nun" },
-        { name: "Mr. Abernethy", tall: false, left: false, role: "a railway inspector" },
-        { name: "Mademoiselle Roux", tall: false, left: true, role: "a cabaret dancer" },
-        { name: "Herr Falk", tall: true, left: true, role: "a chess grandmaster" }
+      cast: [
+        { role: "an exiled royal", titles: ["Princess", "Prince"] }, { role: "a diamond merchant", titles: ["Mr.", "Mrs."] },
+        { role: "a crime novelist", titles: ["Miss", "Mr."] }, { role: "a retired general", titles: ["General"] },
+        { role: "a nursing nun", titles: ["Sister"] }, { role: "a railway inspector", titles: ["Mr."] },
+        { role: "a cabaret dancer", titles: ["Mademoiselle"] }, { role: "a chess grandmaster", titles: ["Herr", "Madame"] },
+        { role: "a foreign correspondent", titles: ["Mr.", "Miss"] }, { role: "a travelling magician", titles: ["Signor", "Madame"] },
+        { role: "a diplomat's secretary", titles: ["Miss", "Mr."] }, { role: "an archaeologist", titles: ["Professor", "Dr."] }
       ],
+      victimTitles: ["Mr.", "Madame", "Lord", "Mrs.", "Count", "Dr."],
       weapons: [
         { name: "Coal Shovel", heavy: true }, { name: "Signal Lantern", heavy: true },
         { name: "Ticket Punch", heavy: false }, { name: "Silk Scarf", heavy: false },
@@ -240,8 +230,6 @@ var Redwing = (function () {
         { name: "Observation Platform", outdoor: true }, { name: "Coal Tender", outdoor: true },
         { name: "Station Platform", outdoor: true }, { name: "Carriage Roof", outdoor: true }
       ],
-      victims: ["Mr. Leopold Grieve", "Madame Ilse Barta", "Lord Peregrine Holt", "Mrs. Constance Avery",
-        "Count Dmitri Volkov", "Dr. Ambrose Kettle"],
       staff: ["The conductor", "A sleeping-car attendant", "The dining-car chef", "The guard", "A porter", "The fireman"],
       witnesses: ["A fellow passenger", "The stationmaster", "A newspaper seller", "A signalman", "A border official", "A travelling salesman"],
       trivia: {
@@ -282,6 +270,25 @@ var Redwing = (function () {
       }
     }
   ];
+  // Every case draws a fresh cast: a role from the scene, a fitting title and a surname from this pool.
+  // Detective Redwing is the only character who stays. Surnames are plain letters so the name codes work on them.
+  var SURNAMES = ["Ashdown", "Ashby", "Bancroft", "Beaumont", "Bellamy", "Blackwood", "Brandt", "Calloway", "Carrow", "Castellane",
+    "Cavendish", "Corrigan", "Dalton", "Darrow", "Delacroix", "Doyle", "Dunmore", "Duval", "Ellery", "Everett", "Fairfax",
+    "Falk", "Faraday", "Fennick", "Fenwick", "Galloway", "Garnet", "Gilchrist", "Grey", "Hadley", "Haldane", "Hale",
+    "Halloran", "Harcourt", "Harrow", "Hawke", "Hollis", "Holloway", "Ingram", "Ives", "Jardine", "Kessler", "Kingsley",
+    "Lacey", "Langford", "Larkin", "Lennox", "Lindqvist", "Lockwood", "Mallory", "Marchetti", "Marlowe", "Montague",
+    "Moreau", "Nash", "Novak", "Oakes", "Okafor", "Ormond", "Orsini", "Pemberton", "Penhallow", "Penrose", "Petrov",
+    "Prescott", "Quigley", "Quill", "Radcliffe", "Rafferty", "Rookwood", "Roux", "Saville", "Selwyn", "Sinclair", "Sutton",
+    "Takeda", "Thorne", "Tolliver", "Trevelyan", "Underhill", "Vance", "Vane", "Vesper", "Vitale", "Wainwright", "Weber",
+    "Westbrook", "Whitlock", "Winslow", "Wolfe", "Yardley", "Yates", "Zeller"];
+  function makeCast(scene, rng) {
+    var names = shuffle(SURNAMES, rng), roles = shuffle(scene.cast, rng).slice(0, 8);
+    // Four tall and four short, four left- and four right-handed, mixed independently.
+    var tall = shuffle([true, true, true, true, false, false, false, false], rng);
+    var left = shuffle([true, true, true, true, false, false, false, false], rng);
+    var cast = roles.map(function (r, i) { return { name: pick(r.titles, rng) + " " + names[i], tall: tall[i], left: left[i], role: r.role }; });
+    return { cast: cast, victim: pick(scene.victimTitles, rng) + " " + names[8] };
+  }
   // Theft cases swap the weapons for valuables. These travel with whichever scene the theft happens in.
   var VALUABLES = {
     items: [
@@ -647,9 +654,10 @@ var Redwing = (function () {
     X.know = Object.assign({}, scene.know, type === "theft" ? VALUABLES.know : {});
     var ITEMS = type === "theft" ? VALUABLES.items : scene.weapons;
     var theme = THEMES[weekday];
+    var people = makeCast(scene, rng);
     for (var tries = 0; tries < 60; tries++) {
       var S, W, L;
-      do { S = shuffle(scene.suspects, rng).slice(0, SIZE); } while (!mixed(S, "tall") || !mixed(S, "left"));
+      do { S = shuffle(people.cast, rng).slice(0, SIZE); } while (!mixed(S, "tall") || !mixed(S, "left"));
       do { W = shuffle(ITEMS, rng).slice(0, SIZE); } while (!mixed(W, "heavy"));
       do { L = shuffle(scene.rooms, rng).slice(0, SIZE); } while (!mixed(L, "outdoor"));
       var idx = []; for (var z = 0; z < SIZE; z++) idx.push(z);
@@ -700,7 +708,7 @@ var Redwing = (function () {
       });
       return {
         seed: String(seed),
-        victim: pick(scene.victims, rng),
+        victim: people.victim,
         type: type, scene: { id: scene.id, name: scene.name, at: scene.at, guests: scene.guests, out: scene.out.tag, groups: scene.groups },
         words: { culprit: X.kind.culprit, item: X.kind.item, itemsLabel: X.kind.itemsLabel, tag: X.kind.tag },
         suspects: S, weapons: W, locations: L,
