@@ -654,8 +654,11 @@ var Redwing = (function () {
     X.know = Object.assign({}, scene.know, type === "theft" ? VALUABLES.know : {});
     var ITEMS = type === "theft" ? VALUABLES.items : scene.weapons;
     var theme = THEMES[weekday];
+    // Sundays bring the Big Case: a longer chain of evidence with no clue that pins anyone down outright, the full
+    // set of Sunday codes, and only three hints to unseal.
+    var big = opts.big != null ? !!opts.big : weekday === 0;
     var people = makeCast(scene, rng);
-    for (var tries = 0; tries < 60; tries++) {
+    for (var tries = 0; tries < (big ? 200 : 60); tries++) {
       var S, W, L;
       do { S = shuffle(people.cast, rng).slice(0, SIZE); } while (!mixed(S, "tall") || !mixed(S, "left"));
       do { W = shuffle(ITEMS, rng).slice(0, SIZE); } while (!mixed(W, "heavy"));
@@ -684,8 +687,8 @@ var Redwing = (function () {
         var without = chosen.slice(0, r).concat(chosen.slice(r + 1));
         if (answers(without, mc).triples === 1) chosen = without;
       }
-      if (chosen.length < 5 || chosen.length > 9) continue;
-      if (chosen.filter(function (c) { return c.kind === "pos"; }).length > 1) continue;
+      if (big ? chosen.length < 7 || chosen.length > 11 : chosen.length < 5 || chosen.length > 9) continue;
+      if (chosen.filter(function (c) { return c.kind === "pos"; }).length > (big ? 0 : 1)) continue;
       chosen = shuffle(chosen, rng);
       chosen = assignSources(encodeCryptic(chosen, S, W, L, rng, theme, X), rng, X);
       // Hints: extra clues unsealed by wrong accusations, weakest first, so the core set alone stays sufficient.
@@ -697,7 +700,7 @@ var Redwing = (function () {
         { text: "Hint: the " + X.kind.culprit + " was " + scene.out.where[L[sol.l[m]].outdoor ? 0 : 1] + " and " + X.kind.took + " a " + X.kind.tag[W[sol.w[m]].heavy ? 0 : 1].toLowerCase() + " " + X.kind.item + ".", kind: "hint" },
         { text: "Hint: the " + X.kind.culprit + " did not " + (type === "theft" ? "take" : "use") + " the " + W[(sol.w[m] + 1) % SIZE].name + " and was not in the " + L[(sol.l[m] + 1) % SIZE].name + ".", kind: "hint" }
       ];
-      hints = hints.concat([pick(strong, rng)]).slice(0, ATTEMPTS - 1);
+      hints = hints.concat([pick(strong, rng)]).slice(0, big ? 3 : ATTEMPTS - 1);
       // Walkthrough: after each core clue, which facts became certain.
       var steps = [], wp = ALL, known = {};
       chosen.forEach(function (c, ci) {
@@ -715,7 +718,7 @@ var Redwing = (function () {
         solution: sol, murderer: m,
         answer: { s: m, w: sol.w[m], l: sol.l[m] },
         murderClue: mc.text, murderType: mc.type,
-        theme: theme.name,
+        theme: theme.name, big: big,
         clues: chosen.map(function (c) { return { text: c.text, plain: c.plain, code: c.code, method: c.method || null, puzzle: c.puzzle || null, cipher: !!c.cipher, kind: c.kind, source: c.source, speaker: c.speaker || null }; }),
         hints: hints.map(function (c) { return { text: c.text, kind: c.kind }; }),
         steps: steps,

@@ -18,7 +18,7 @@ const ymd = (d) => d.toISOString().slice(0, 10);
 // What the page may see: the people, items, rooms and coded clues. Decoded clues, the answer and the proof stay locked.
 function publicCase(id, c) {
   return {
-    id, type: c.type, scene: c.scene, words: c.words, theme: c.theme, victim: c.victim,
+    id, type: c.type, scene: c.scene, words: c.words, theme: c.theme, big: c.big, victim: c.victim,
     suspects: c.suspects, weapons: c.weapons, locations: c.locations, murderClue: c.murderClue, attempts: c.attempts,
     clues: c.clues.map((x) => ({ text: x.text, code: x.code, puzzle: x.puzzle, cipher: x.cipher, source: x.source, speaker: x.speaker })),
     hints: c.hints.map((x) => ({ text: x.text }))
@@ -43,11 +43,21 @@ function openLock(id, lock, g) {
     return JSON.parse(Buffer.concat([d.update(raw.subarray(0, raw.length - 16)), d.final()]).toString('utf8'));
   } catch (e) { return null; }
 }
+// A second sealed copy for the answer desk (worker/), keyed by HMAC(seed secret, id): the Worker opens it with a
+// cheap HMAC and AES call instead of rebuilding the case, which would overrun its CPU limit.
+function deskKey(seedSecret, id) { return crypto.createHmac('sha256', seedSecret).update('desk|' + id).digest(); }
+function sealDesk(id, c, seedSecret) {
+  const iv = crypto.randomBytes(12), cipher = crypto.createCipheriv('aes-256-gcm', deskKey(seedSecret, id), iv);
+  const data = Buffer.concat([cipher.update(JSON.stringify({ answer: c.answer, open: secret(c) }), 'utf8'), cipher.final(), cipher.getAuthTag()]);
+  return { iv: iv.toString('base64'), data: data.toString('base64') };
+}
 function makeCase(id, reveal, iter, seedSecret) {
-  const c = Redwing.generate(Redwing.seedFor(seedSecret == null ? SEED : seedSecret, id));
+  if (seedSecret == null) seedSecret = SEED;
+  const c = Redwing.generate(Redwing.seedFor(seedSecret, id));
   if (c._check().triples !== 1) throw new Error('Case ' + id + ' does not have exactly one answer');
   const out = publicCase(id, c);
   out.lock = lockCase(id, c, iter || ITER);
+  if (!/^p-/.test(id)) out.desk = sealDesk(id, c, seedSecret);
   if (reveal) out.open = secret(c);
   return out;
 }
@@ -98,5 +108,5 @@ function build() {
   console.log('Built dist/index.html, dist/redwing/index.html, ' + Object.keys(index.daily).length + ' daily and ' + PRACTICE + ' practice cases');
 }
 
-module.exports = { publicCase, makeCase, openLock, revealed };
+module.exports = { publicCase, makeCase, openLock, revealed, deskKey };
 if (require.main === module) build();

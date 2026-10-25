@@ -20,13 +20,22 @@ On phones the page turns into four tabs (Case, Evidence, Notebook, Accuse) with 
 
 Each weekday has its own code theme (see `THEMES` in `src/engine.js`): anagrams, trivia, general knowledge ("the room that holds the Merlot and the Malbec" means the Wine Cellar), number codes, Morse, mirror writing, Caesar and Atbash notes.
 
+## Ranks, stats and friends
+
+Everything here lives in the player's browser, with no accounts and no server.
+
+- Ranks climb with solved daily cases: Rookie, Constable (3), Sergeant (10), Detective (25), Inspector (50), Chief Inspector (100). The header button shows the current rank and opens the stats screen: played, solve rate, average tries, current and best streak, Big Cases solved, and a chart of which accusation cracked each case.
+- Sundays bring the Big Case: 7 to 11 clues, no clue that places anyone in a room outright, and three hints instead of five. It still has exactly one answer.
+- Daily reminder: an `.ics` file (Apple, Outlook) or a Google Calendar link that repeats every day at the chosen time with a link to the game.
+- Friends board: a player picks a detective name, and every link they share then carries `?pal=id.lastDay.results.name`, with their last 14 daily results (`1`-`6` tries, `0` unsolved, `-` not played). Opening such a link adds or refreshes that friend on the board, which shows the last seven days side by side.
+
 ## Player tracking
 
-Visits are counted with Cloudflare Web Analytics (token in `package.json` under `config.cloudflareBeacon`), visible only to the site owner. Game events go to GoatCounter (`config.goatcounter`, dashboard at brainbrew.goatcounter.com, no cookies): `started/case-N` when someone makes their first accusation, `solved/case-N/in-K` when they solve it in K tries, `failed/case-N` after six wrong accusations, and `shared/case-N` when someone taps a share button. Each event's title includes that day's theme, case type and scene. Practice games show up as `practice` instead of `case-N`.
+Visits are counted with Cloudflare Web Analytics (token in `package.json` under `config.cloudflareBeacon`), visible only to the site owner. Game events go to GoatCounter (`config.goatcounter`, dashboard at brainbrew.goatcounter.com, no cookies): `started/case-N` when someone makes their first accusation, `solved/case-N/in-K` when they solve it in K tries, `failed/case-N` after six wrong accusations, `shared/case-N` when someone taps a share button, `invited` when someone shares a friends-board invite, and `reminder` when someone adds the daily reminder to a calendar. Each event's title includes that day's theme, case type and scene. Practice games show up as `practice` instead of `case-N`.
 
 ## Answer desk (`worker/`)
 
-A Cloudflare Worker at `https://api.brainbrew.fun/redwing/reveal`. The game posts the date and six different wrong accusations, and the Worker rebuilds the case from `REDWING_SECRET` and returns the answer, the proof and the decoded clues. A list containing the right answer, fewer than six guesses, or a date after tomorrow gets nothing. The deploy workflow publishes it whenever these repository secrets exist (Settings → Secrets and variables → Actions):
+A Cloudflare Worker at `https://api.brainbrew.fun/redwing/reveal`. The game posts the date and six different wrong accusations, and the Worker opens the case file's sealed `desk` copy (AES-GCM, keyed by HMAC-SHA256 of `REDWING_SECRET` and `desk|<date>`) and returns the answer, the proof and the decoded clues. A list containing the right answer, fewer than six guesses, or a date after tomorrow gets nothing. The deploy workflow publishes it whenever these repository secrets exist (Settings → Secrets and variables → Actions):
 
 - `REDWING_SECRET`: any long random phrase. Used by the site build and the Worker. Changing it changes every case.
 - `CLOUDFLARE_API_TOKEN`: a Cloudflare API token from the "Edit Cloudflare Workers" template, scoped to this account and the brainbrew.fun zone.

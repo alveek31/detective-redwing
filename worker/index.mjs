@@ -1,15 +1,24 @@
 // Detective Redwing answer desk. After a player has made six wrong accusations on a daily case, the game sends
-// them here and gets the answer back. The answer never ships in the page; this Worker rebuilds it from the
-// seed secret, which only it and the site build know.
-import Redwing from '../src/engine.js';
-
+// the case's sealed desk copy and the six guesses here. The Worker opens the seal with a key only it and the site
+// build can derive (HMAC of the seed secret), checks the guesses are six different wrong ones, and returns the
+// answer. The answer never ships in the page in readable form.
 const LAUNCH = '2026-10-20';
 const ORIGINS = ['https://brainbrew.fun', 'https://www.brainbrew.fun', 'https://alveek31.github.io'];
+const SIZE = 5, ATTEMPTS = 6;
 
 function reply(body, status, origin) {
   const headers = { 'content-type': 'application/json', 'cache-control': 'no-store', vary: 'Origin' };
   if (ORIGINS.includes(origin)) Object.assign(headers, { 'access-control-allow-origin': origin, 'access-control-allow-methods': 'POST, OPTIONS', 'access-control-allow-headers': 'content-type' });
   return new Response(body === null ? null : JSON.stringify(body), { status, headers });
+}
+const b64 = (t) => Uint8Array.from(atob(t), (c) => c.charCodeAt(0));
+async function openDesk(secret, date, desk) {
+  const enc = new TextEncoder();
+  const hk = await crypto.subtle.importKey('raw', enc.encode(secret || ''), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const raw = await crypto.subtle.sign('HMAC', hk, enc.encode('desk|' + date));
+  const key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['decrypt']);
+  const buf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64(desk.iv) }, key, b64(desk.data));
+  return JSON.parse(new TextDecoder().decode(buf));
 }
 
 export default {
@@ -24,15 +33,16 @@ export default {
     const latest = new Date(Date.now() + 864e5).toISOString().slice(0, 10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date < LAUNCH || date > latest) return reply({ error: 'unknown case' }, 404, origin);
     const g = Array.isArray(q.guesses) ? q.guesses : [];
-    const ok = (n) => Number.isInteger(n) && n >= 0 && n < Redwing.SIZE;
+    const ok = (n) => Number.isInteger(n) && n >= 0 && n < SIZE;
     const keys = new Set(g.map((x) => x && [x.s, x.w, x.l].join(',')));
-    if (g.length !== Redwing.ATTEMPTS || keys.size !== g.length || !g.every((x) => x && ok(x.s) && ok(x.w) && ok(x.l))) {
+    if (g.length !== ATTEMPTS || keys.size !== g.length || !g.every((x) => x && ok(x.s) && ok(x.w) && ok(x.l))) {
       return reply({ error: 'six different accusations are needed first' }, 403, origin);
     }
-    const c = Redwing.generate(Redwing.seedFor(env.REDWING_SECRET, date));
-    const a = c.answer;
+    let sealed;
+    try { sealed = await openDesk(env.REDWING_SECRET, date, q.desk || {}); } catch (e) { return reply({ error: 'unknown case' }, 404, origin); }
+    const a = sealed.answer;
     // A list holding the right answer is not a lost game, so it gets nothing back.
     if (g.some((x) => x.s === a.s && x.w === a.w && x.l === a.l)) return reply({ error: 'that case was solved' }, 403, origin);
-    return reply(Redwing.secretOf(c), 200, origin);
+    return reply(sealed.open, 200, origin);
   }
 };
