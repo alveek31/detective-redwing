@@ -1,6 +1,6 @@
 # Brainbrew
 
-Daily puzzle games at [brainbrew.fun](https://brainbrew.fun). The home page is `src/hub.html`; each game builds into its own folder.
+Daily puzzle games at [brainbrew.fun](https://brainbrew.fun). The home page is `src/hub.html`; each game builds into its own folder. To add a game, see [docs/ADDING_A_GAME.md](docs/ADDING_A_GAME.md).
 
 ## Detective Redwing (`/redwing`)
 
