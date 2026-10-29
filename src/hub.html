@@ -44,6 +44,12 @@ footer { color: var(--muted); font-size: 13px; }
       <p>A new murder or theft for Detective Redwing every day. Crack the coded evidence and name the culprit in six accusations.</p>
       <span class="play">Play today's case →</span>
     </a>
+    <a class="game" href="table-manners/">
+      <span class="tag" id="mannersTag">Daily seating puzzle</span>
+      <h2>Table <span>Manners</span></h2>
+      <p>The guests called ahead with their grudges. Seat everyone so dinner goes smoothly. Three wrong guesses and dinner is ruined.</p>
+      <span class="play">Set today's table →</span>
+    </a>
     <div class="game soon">
       <span class="tag">Brewing</span>
       <h2>More games soon</h2>
@@ -56,5 +62,7 @@ footer { color: var(--muted); font-size: 13px; }
 (function () {
   var n = Math.round((new Date(new Date().toDateString()) - new Date(2026, 9, 20)) / 864e5) + 1;
   if (n >= 1) document.getElementById("redwingTag").textContent = "Daily logic mystery · Case No. " + n;
+  var m = Math.round((new Date(new Date().toDateString()) - new Date(2026, 9, 1)) / 864e5) + 1;
+  if (m >= 1) document.getElementById("mannersTag").textContent = "Daily seating puzzle · Dinner No. " + m;
 })();
 </script>

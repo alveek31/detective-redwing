@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "build": "node build.js",
-    "test": "node src/test.js 500"
+    "test": "node src/test.js 500 && node src/tablemanners.test.js"
   },
   "config": {
     "cloudflareBeacon": "54fb48281c62456da59255d39e2ef3a9",
