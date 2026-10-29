@@ -119,7 +119,7 @@ function build() {
   const dist = __dirname + '/dist';
   fs.rmSync(dist + '/redwing/cases', { recursive: true, force: true });
 
-  write(dist + '/index.html', page(src('hub.html'), { title: 'Brainbrew: daily puzzles', desc: 'Small daily puzzles worth a coffee break, starting with Detective Redwing, a new murder or theft every day.', path: '' }));
+  write(dist + '/index.html', page(src('hub.html'), { title: 'Brainbrew: daily puzzles', desc: 'Free daily puzzle games: solve today\'s Detective Redwing mystery and Table Manners seating puzzle. Same puzzles for everyone, no accounts.', path: '' }));
   write(dist + '/redwing/index.html', page(src('app.html').replace('<!--HOME-->', '<a class="home" href="../">← Brainbrew</a>').replace('/*ANSWER_DESK*/', cfg.answerDesk || ''), { title: 'Detective Redwing', desc: 'A new murder or theft for Detective Redwing every day. Crack the coded evidence and name the culprit in six accusations.', path: 'redwing/' }));
   ['og.png', 'icon-180.png'].forEach((f) => { fs.mkdirSync(dist + '/redwing', { recursive: true }); fs.copyFileSync(__dirname + '/src/assets/' + f, dist + '/redwing/' + f); });
 

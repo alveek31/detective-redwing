@@ -1,68 +1,252 @@
 <title>Brainbrew</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Libre+Franklin:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Figtree:wght@400;600;700&display=swap">
 <style>
-/* Layout: one short column, brand mark then a shelf of game cards that wraps to one column on phones. */
+/* Sticker theme. Layout: masthead (wordmark, live countdown), today's date set large with the date on a yellow sticker,
+   a two-up shelf of slightly crooked sticker tiles with animated art, and a full-width "coming soon" strip.
+   Motion: one load sequence, squash-and-stretch art per game, tiles tilt toward the pointer. */
 :root {
-  --bg: #F1F3EE; --card: #FFFFFF; --ink: #17201C; --muted: #5A645F; --line: #D3D9D2; --brew: #2E6B57; --red: #8B1E2D;
-  --display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
-  --body: "Libre Franklin", "Helvetica Neue", Arial, sans-serif;
+  --bg: #DCE8FF; --card: #FFFFFF; --ink: #141414; --muted: #474C59; --sun: #FFC93C; --on-btn: #141414; --wine: #8E1430;
+  /* One pair per game: --xx is the button, --xx-field the art panel behind the drawing. */
+  --rw: #E8413C; --rw-field: #E8413C;
+  --tm: #2FA36B; --tm-field: #2FA36B;
+  --display: "Bagel Fat One", "Arial Rounded MT Bold", system-ui, sans-serif;
+  --body: "Figtree", "Helvetica Neue", Arial, sans-serif;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --bg: #111613; --card: #18201C; --ink: #E6EAE5; --muted: #9AA59F; --line: #2B3530; --brew: #6CC3A4; --red: #D9566A; color-scheme: dark } }
-:root[data-theme="dark"] { --bg: #111613; --card: #18201C; --ink: #E6EAE5; --muted: #9AA59F; --line: #2B3530; --brew: #6CC3A4; --red: #D9566A; color-scheme: dark }
+  --bg: #16171D; --card: #22242D; --ink: #F4F1E8; --muted: #B8BCCA; --on-btn: #16171D;
+  --rw: #FF6B5E; --rw-field: #C9332F; --tm: #45C487; --tm-field: #23855A; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #16171D; --card: #22242D; --ink: #F4F1E8; --muted: #B8BCCA; --on-btn: #16171D;
+  --rw: #FF6B5E; --rw-field: #C9332F; --tm: #45C487; --tm-field: #23855A; color-scheme: dark }
 * { box-sizing: border-box }
-body { background: var(--bg); color: var(--ink); font: 16px/1.55 var(--body); }
-.wrap { max-width: 880px; margin: 0 auto; padding-block: 48px 64px;
-  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
-  display: flex; flex-direction: column; gap: 40px; }
-h1 { font: 800 clamp(44px, 10vw, 84px)/.95 var(--display); letter-spacing: -.03em; margin: 0; }
-h1 span { color: var(--brew); }
-.lede { font-size: 18px; color: var(--muted); max-width: 46ch; margin: 12px 0 0; }
-.shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
-.game { display: flex; flex-direction: column; gap: 10px; padding: 22px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); color: inherit; text-decoration: none; transition: transform .15s ease, border-color .15s ease; }
-.game:hover { transform: translateY(-2px); border-color: var(--ink); }
-.game:focus-visible { outline: 2px solid var(--brew); outline-offset: 3px; }
-.game h2 { font: 800 26px/1.1 var(--display); margin: 0; }
-.game h2 span { color: var(--red); }
-.game p { margin: 0; color: var(--muted); }
-.tag { font: 600 12px var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--brew); }
-.play { margin-top: auto; font-weight: 600; }
-.soon { border-style: dashed; background: transparent; }
-.soon h2 { color: var(--muted); }
-footer { color: var(--muted); font-size: 13px; }
-@media (prefers-reduced-motion: reduce) { .game { transition: none; } }
+body { background: var(--bg); color: var(--ink); font: 17px/1.55 var(--body); overflow-x: hidden; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-block: 28px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+/* Masthead */
+.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
+.mark { display: flex; align-items: center; gap: 10px; font: 400 28px/1 var(--display); margin: 0; }
+.mark svg { width: 40px; height: 40px; flex: none; }
+.steam { animation: steam 2.4s ease-in-out infinite; }
+.steam + .steam { animation-delay: -1.2s; }
+@keyframes steam { 0%, 100% { transform: translateY(0); opacity: 1 } 50% { transform: translateY(-3px); opacity: .45 } }
+.clock { display: flex; align-items: center; gap: 10px; margin: 0; padding: 8px 16px; background: var(--card); border: 3px solid var(--ink);
+  border-radius: 999px; box-shadow: 3px 3px 0 var(--ink); font-weight: 600; font-size: 14px; }
+.clock b { font: 700 18px/1 var(--body); font-variant-numeric: tabular-nums; }
+
+.today { margin-top: 56px; }
+.today h1 { font: 400 clamp(50px, 10vw, 128px)/.95 var(--display); letter-spacing: -.01em; margin: 0; }
+.today h1 .line { display: block; }
+.today h1 .line > span { display: inline-block; }
+.today .hl { margin-top: .08em; padding: 0 .18em .04em; background: var(--sun); color: #141414; border: 4px solid var(--ink);
+  border-radius: .22em; box-shadow: 6px 6px 0 var(--ink); rotate: -1.5deg; }
+.today p { margin: 28px 0 0; color: var(--muted); max-width: 46ch; font-size: 18px; }
+
+/* Shelf. To add a game: copy a tile, give it a class, add its --xx / --xx-field tokens (light and both dark blocks),
+   copy the two ".redwing" rules below for it, and swap or remove the coming-soon strip. */
+.shelf { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; margin-top: 56px; perspective: 1200px; }
+.game { --rx: 0deg; --ry: 0deg; --rot: 0deg; --lift: 0px;
+  display: flex; flex-direction: column; background: var(--card); border: 3px solid var(--ink); border-radius: 26px; box-shadow: 7px 7px 0 var(--ink);
+  overflow: hidden; color: inherit; text-decoration: none;
+  transform: translateY(var(--lift)) rotate(var(--rot)) rotateX(var(--rx)) rotateY(var(--ry));
+  transition: transform .45s cubic-bezier(.3,1.6,.5,1); will-change: transform; }
+.redwing { --rot: -1.2deg; } .manners { --rot: 1deg; }
+.game:hover { --rot: 0deg; --lift: -6px; }
+.game.tilting { transition: transform .08s linear; }
+.game:focus-visible { outline: 4px dashed var(--ink); outline-offset: 6px; }
+.art { position: relative; height: 250px; overflow: hidden; border-bottom: 3px solid var(--ink); }
+.art::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle, rgba(255,255,255,.18) 2px, transparent 2.5px) 0 0 / 22px 22px; }
+.art svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; }
+.redwing .art { background: var(--rw-field); } .manners .art { background: var(--tm-field); }
+.body { display: flex; flex-direction: column; gap: 8px; padding: 22px 24px 26px; flex: 1; }
+.no { align-self: flex-start; padding: 3px 12px; background: var(--sun); color: #141414; border: 2px solid var(--ink); border-radius: 999px;
+  font-weight: 700; font-size: 14px; font-variant-numeric: tabular-nums; }
+.game h2 { font: 400 clamp(30px, 3.4vw, 36px)/1.02 var(--display); margin: 4px 0 0; }
+.game p { margin: 0; color: var(--muted); max-width: 42ch; }
+.play { margin-top: auto; align-self: flex-start; padding: 12px 22px; border: 3px solid var(--ink); border-radius: 999px; box-shadow: 3px 3px 0 var(--ink);
+  font-weight: 700; color: var(--on-btn); transition: transform .3s cubic-bezier(.3,1.8,.5,1); }
+.gap { height: 14px; flex: none; }
+.redwing .play { background: var(--rw); } .manners .play { background: var(--tm); }
+.game:hover .play { transform: scale(1.06) rotate(-2deg); }
+
+/* Redwing: the hat hops with squash and stretch, and a pair of eyes peeks out from under it each time it lifts. */
+.hat { transform-box: view-box; transform-origin: 160px 178px; animation: hop 2.6s cubic-bezier(.4,0,.3,1) infinite; }
+@keyframes hop { 0% { transform: scale(1.1, .88) } 14% { transform: translateY(-34px) scale(.93, 1.09) } 34% { transform: translateY(-58px) rotate(9deg) }
+  52% { transform: translateY(-34px) rotate(-3deg) scale(.96, 1.05) } 66% { transform: scale(1.12, .86) } 76% { transform: scale(.97, 1.04) } 86%, 100% { transform: none } }
+.hatshadow { transform-box: view-box; transform-origin: 160px 186px; animation: shade 2.6s cubic-bezier(.4,0,.3,1) infinite; }
+@keyframes shade { 0%, 66% { transform: scaleX(1.1); opacity: 1 } 34% { transform: scaleX(.55); opacity: .5 } 86%, 100% { transform: none; opacity: 1 } }
+.eyes { animation: look 2.6s ease-in-out infinite; }
+@keyframes look { 0%, 18% { transform: none } 26% { transform: translateX(-5px) } 42% { transform: translateX(5px) } 56%, 100% { transform: none } }
+
+/* Table Manners: the glass wobbles, goes pop in a starburst of wine, then boings back in. */
+.glass { transform-box: view-box; transform-origin: 160px 190px; animation: glass 5s cubic-bezier(.3,1.5,.5,1) infinite; }
+@keyframes glass { 0%, 30% { transform: none; opacity: 1 } 36% { transform: rotate(-7deg) scale(1.02, .97) } 42% { transform: rotate(7deg) scale(.98, 1.03) }
+  48% { transform: scale(1.18); opacity: 1 } 50%, 76% { transform: scale(0); opacity: 0 } 84% { transform: scale(1.14, .9); opacity: 1 } 90% { transform: scale(.95, 1.06) } 96%, 100% { transform: none } }
+.pop { transform-box: view-box; transform-origin: 160px 104px; opacity: 0; animation: pop 5s cubic-bezier(.2,1.4,.4,1) infinite; }
+@keyframes pop { 0%, 48% { opacity: 0; transform: scale(.2) } 52% { opacity: 1; transform: scale(1.1) rotate(10deg) } 64% { opacity: 1; transform: scale(1) rotate(14deg) }
+  70%, 100% { opacity: 0; transform: scale(.6) rotate(20deg) } }
+.blob { opacity: 0; transform-box: view-box; animation: blob 5s cubic-bezier(.2,.7,.4,1) infinite; }
+@keyframes blob { 0%, 48% { opacity: 0; transform: none } 51% { opacity: 1; transform: none } 70% { opacity: 1; transform: translate(var(--dx), var(--dy)) scale(.8) }
+  74%, 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(.5) } }
+
+/* Coming soon strip */
+.soon { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 16px 28px; padding: 22px 28px; border: 3px dashed var(--muted); border-radius: 26px; }
+.soon svg { width: 92px; height: 80px; flex: none; color: var(--muted); }
+.soon h2 { font: 400 28px/1.1 var(--display); margin: 0; color: var(--muted); }
+.soon p { margin: 4px 0 0; color: var(--muted); }
+
+footer { margin-top: 52px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 14px; font-weight: 600; }
+
+/* One load sequence: the weekday hops up, the date sticker slaps on, then the tiles follow. */
+.rise { animation: rise .7s cubic-bezier(.3,1.5,.5,1) both; }
+@keyframes rise { from { transform: translateY(40px); opacity: 0 } to { transform: none; opacity: 1 } }
+.today .hl.rise { animation: slap .55s cubic-bezier(.3,1.7,.5,1) .18s both; }
+@keyframes slap { from { transform: scale(1.35) rotate(6deg); opacity: 0 } to { transform: none; opacity: 1 } }
+.today p.rise { animation-delay: .3s; }
+.shelf > .rise { animation-name: lift; }
+.shelf > .rise:nth-child(1) { animation-delay: .4s } .shelf > .rise:nth-child(2) { animation-delay: .5s } .shelf > .rise:nth-child(3) { animation-delay: .6s }
+@keyframes lift { from { translate: 0 48px; opacity: 0 } to { translate: 0 0; opacity: 1 } }
+
+@media (max-width: 720px) {
+  .today { margin-top: 36px; }
+  .today .hl { box-shadow: 4px 4px 0 var(--ink); }
+  .today p { font-size: 17px; }
+  .shelf { grid-template-columns: minmax(0, 1fr); gap: 28px; margin-top: 40px; }
+  .art { height: 210px; }
+  .soon { padding: 20px; }
+  .soon svg { width: 72px; height: 62px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .pop, .blob { opacity: 0; }
+}
 </style>
 <div class="wrap">
   <header>
-    <h1>Brain<span>brew</span></h1>
-    <p class="lede">Small daily puzzles worth a coffee break. A new one every day, the same for everyone.</p>
+    <div class="top">
+      <p class="mark">
+        <svg viewBox="0 0 40 40" aria-hidden="true" stroke="var(--ink)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M7 17h22v7a10 10 0 0 1-10 10h-2A10 10 0 0 1 7 24z" fill="var(--sun)"/>
+          <path d="M29 19h3a4.5 4.5 0 0 1 0 9h-3.5" fill="none"/>
+          <path class="steam" d="M14 12c0-2.5 2.5-3 2.5-5.5S15 4 15 4" fill="none"/><path class="steam" d="M21 12c0-2.5 2.5-3 2.5-5.5S22 4 22 4" fill="none"/>
+        </svg>
+        Brainbrew
+      </p>
+      <p class="clock" aria-live="off">New puzzles in <b id="clock">--:--:--</b></p>
+    </div>
+    <section class="today">
+      <h1><span class="line"><span class="rise" id="wd">Today's</span></span><span class="line"><span class="hl rise" id="dm">puzzles</span></span></h1>
+      <p class="rise">Small daily puzzles for a coffee break. Everyone gets the same ones, and they're new every midnight.</p>
+    </section>
   </header>
+
   <main class="shelf">
-    <a class="game" href="redwing/">
-      <span class="tag" id="redwingTag">Daily logic mystery</span>
-      <h2>Detective <span>Redwing</span></h2>
-      <p>A new murder or theft for Detective Redwing every day. Crack the coded evidence and name the culprit in six accusations.</p>
-      <span class="play">Play today's case →</span>
+    <a class="game redwing rise" href="redwing/">
+      <div class="art">
+        <svg viewBox="0 0 320 240" aria-hidden="true" preserveAspectRatio="xMidYMid meet" stroke="#141414" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+          <ellipse class="hatshadow" cx="160" cy="186" rx="78" ry="9" fill="#000" fill-opacity=".22" stroke="none"/>
+          <g class="eyes">
+            <ellipse cx="145" cy="164" rx="11" ry="13" fill="#FFFFFF"/><ellipse cx="175" cy="164" rx="11" ry="13" fill="#FFFFFF"/>
+            <circle cx="148" cy="166" r="5" fill="#141414" stroke="none"/><circle cx="178" cy="166" r="5" fill="#141414" stroke="none"/>
+          </g>
+          <g class="hat">
+            <path d="M84 170c0-12 30-20 76-20s76 8 76 20-34 18-76 18-76-6-76-18z" fill="#FFF1DE"/>
+            <path d="M114 162c-2-28 4-62 16-76 8-9 20-5 30-5s22-4 30 5c12 14 18 48 16 76-12 6-34 8-46 8s-34-2-46-8z" fill="#FFF1DE"/>
+            <path d="M160 82c-6 10-7 22-5 34" fill="none"/>
+            <path d="M114 146c14 6 32 8 46 8s32-2 46-8l1 16c-12 6-34 8-47 8s-35-2-47-8z" fill="#3A1A20"/>
+            <path d="M192 152c4-22 10-42 24-60 4 22-4 44-16 62z" fill="#FFC93C"/>
+          </g>
+        </svg>
+      </div>
+      <div class="body">
+        <span class="no" id="redwingNo">Daily logic mystery</span>
+        <h2>Detective Redwing</h2>
+        <p>A new murder or theft every day. Crack the coded evidence and name the culprit in six accusations.</p>
+        <span class="gap"></span>
+        <span class="play">Play today's case</span>
+      </div>
     </a>
-    <a class="game" href="table-manners/">
-      <span class="tag" id="mannersTag">Daily seating puzzle</span>
-      <h2>Table <span>Manners</span></h2>
-      <p>The guests called ahead with their grudges. Seat everyone so dinner goes smoothly. Three wrong guesses and dinner is ruined.</p>
-      <span class="play">Set today's table →</span>
+
+    <a class="game manners rise" href="table-manners/">
+      <div class="art">
+        <svg viewBox="0 0 320 240" aria-hidden="true" preserveAspectRatio="xMidYMid meet" stroke="#141414" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+          <ellipse cx="160" cy="196" rx="56" ry="8" fill="#000" fill-opacity=".2" stroke="none"/>
+          <path class="pop" d="M160 52l14 30 32-8-18 28 28 20-34 2 2 34-24-24-24 24 2-34-34-2 28-20-18-28 32 8z" fill="#FFC93C"/>
+          <circle class="blob" cx="160" cy="104" r="10" fill="var(--wine)" style="--dx:-88px;--dy:-40px"/>
+          <circle class="blob" cx="160" cy="104" r="8" fill="var(--wine)" style="--dx:92px;--dy:-26px"/>
+          <circle class="blob" cx="160" cy="104" r="12" fill="var(--wine)" style="--dx:-70px;--dy:62px"/>
+          <circle class="blob" cx="160" cy="104" r="7" fill="var(--wine)" style="--dx:78px;--dy:58px"/>
+          <circle class="blob" cx="160" cy="104" r="6" fill="var(--wine)" style="--dx:8px;--dy:-78px"/>
+          <g class="glass">
+            <path d="M152 130h16v50h-16z" fill="#FFFFFF"/>
+            <path d="M124 188c0-8 16-12 36-12s36 4 36 12-16 8-36 8-36 0-36-8z" fill="#FFFFFF"/>
+            <path d="M122 48h76c2 46-10 84-38 84s-40-38-38-84z" fill="#FFFFFF" fill-opacity=".85"/>
+            <path d="M125 86c10 6 60 6 70 0-4 28-16 44-35 44s-31-16-35-44z" fill="var(--wine)"/>
+            <path d="M136 58c-2 14 0 30 6 40" fill="none" stroke="#FFFFFF" stroke-width="5" opacity=".9"/>
+          </g>
+        </svg>
+      </div>
+      <div class="body">
+        <span class="no" id="mannersNo">Daily seating puzzle</span>
+        <h2>Table Manners</h2>
+        <p>The guests called ahead with their grudges. Seat everyone before dinner is ruined, with three wrong guesses to spare.</p>
+        <span class="gap"></span>
+        <span class="play">Set today's table</span>
+      </div>
     </a>
-    <div class="game soon">
-      <span class="tag">Brewing</span>
-      <h2>More games soon</h2>
-      <p>New daily puzzles are on the way.</p>
+
+    <div class="soon rise">
+      <svg viewBox="0 0 92 80" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="3 8">
+        <path d="M22 34h40v14a16 16 0 0 1-16 16h-8a16 16 0 0 1-16-16z"/><path d="M62 38h6a8 8 0 0 1 0 16h-6"/>
+        <path class="steam" d="M36 26c0-5 5-6 5-11s-4-7-4-7"/><path class="steam" d="M48 26c0-5 5-6 5-11s-4-7-4-7"/>
+      </svg>
+      <div>
+        <h2>Another puzzle is brewing</h2>
+        <p>A new daily game is on its way to the shelf.</p>
+      </div>
     </div>
   </main>
-  <footer>brainbrew.fun</footer>
+
+  <footer><span>brainbrew.fun</span><span>No accounts. Your streaks stay in your browser.</span></footer>
 </div>
 <script>
 (function () {
-  var n = Math.round((new Date(new Date().toDateString()) - new Date(2026, 9, 20)) / 864e5) + 1;
-  if (n >= 1) document.getElementById("redwingTag").textContent = "Daily logic mystery · Case No. " + n;
-  var m = Math.round((new Date(new Date().toDateString()) - new Date(2026, 9, 1)) / 864e5) + 1;
-  if (m >= 1) document.getElementById("mannersTag").textContent = "Daily seating puzzle · Dinner No. " + m;
+  var today = new Date(new Date().toDateString());
+  var day = function (y, m, d) { return Math.round((today - new Date(y, m - 1, d)) / 864e5) + 1; };
+  try {
+    document.getElementById("wd").textContent = today.toLocaleDateString("en-GB", { weekday: "long" });
+    document.getElementById("dm").textContent = today.toLocaleDateString("en-GB", { day: "numeric", month: "long" });
+  } catch (e) {}
+  var n = day(2026, 10, 20), m = day(2026, 10, 1);
+  if (n >= 1) document.getElementById("redwingNo").textContent = "Case No. " + n;
+  if (m >= 1) document.getElementById("mannersNo").textContent = "Dinner No. " + m;
+
+  var clock = document.getElementById("clock"), pad = function (x) { return (x < 10 ? "0" : "") + x; };
+  function tick() {
+    var now = new Date(), mid = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    var s = Math.max(0, Math.floor((mid - now) / 1000));
+    clock.textContent = pad(Math.floor(s / 3600)) + ":" + pad(Math.floor(s / 60) % 60) + ":" + pad(s % 60);
+    if (s === 0) setTimeout(function () { location.reload(); }, 1500);
+  }
+  tick(); setInterval(tick, 1000);
+
+  // Tiles lean toward the pointer, and the art speeds up while you hover.
+  var fine = window.matchMedia && matchMedia("(hover: hover) and (pointer: fine)").matches;
+  var still = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!fine || still) return;
+  document.querySelectorAll("a.game").forEach(function (tile) {
+    var art = tile.querySelector(".art");
+    function rate(r) { if (art.getAnimations) art.getAnimations({ subtree: true }).forEach(function (a) { a.playbackRate = r; }); }
+    tile.addEventListener("pointermove", function (e) {
+      var b = tile.getBoundingClientRect(), x = (e.clientX - b.left) / b.width - .5, y = (e.clientY - b.top) / b.height - .5;
+      tile.classList.add("tilting");
+      tile.style.setProperty("--ry", (x * 8).toFixed(2) + "deg");
+      tile.style.setProperty("--rx", (-y * 6).toFixed(2) + "deg");
+    });
+    tile.addEventListener("pointerenter", function () { rate(1.6); });
+    tile.addEventListener("pointerleave", function () {
+      tile.classList.remove("tilting"); tile.style.setProperty("--rx", "0deg"); tile.style.setProperty("--ry", "0deg"); rate(1);
+    });
+  });
 })();
 </script>
