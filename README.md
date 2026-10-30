@@ -43,6 +43,15 @@ Everything here lives in the player's browser, with no accounts and no server.
 
 Visits are counted with Cloudflare Web Analytics (token in `package.json` under `config.cloudflareBeacon`), visible only to the site owner. Game events go to GoatCounter (`config.goatcounter`, dashboard at brainbrew.goatcounter.com, no cookies): `started/case-N` when someone makes their first accusation, `solved/case-N/in-K` when they solve it in K tries, `failed/case-N` after six wrong accusations, `shared/case-N` when someone taps a share button, `invited` when someone shares a friends-board invite, and `reminder` when someone adds the daily reminder to a calendar. Each event's title includes that day's theme, case type and scene. Practice games show up as `practice` instead of `case-N`.
 
+## Night Shift (`nightshift.brainbrew.fun`)
+
+A live party game for one room (Mafia, Werewolf or Chor-Police): one phone hosts, everyone else holds a secret role card on their own phone. Unlike the daily puzzles it needs a live server, so it isn't built from this repo:
+
+- Code: [naqvikhan/night-shift](https://github.com/naqvikhan/night-shift). It deploys from there with its own GitHub Actions workflow.
+- Hosting: a separate Cloudflare Worker named `nightshift` on this account, which serves the page and the game rooms (Durable Objects). It doesn't touch `worker/` or this site's build.
+- Address: `nightshift.brainbrew.fun`, attached to that Worker as a Custom Domain in the Cloudflare dashboard.
+- Here it is only a tile on the home page (`src/hub.html`) linking to that address.
+
 ## Answer desk (`worker/`)
 
 A Cloudflare Worker at `https://api.brainbrew.fun/redwing/reveal`. The game posts the date and six different wrong accusations, and the Worker opens the case file's sealed `desk` copy (AES-GCM, keyed by HMAC-SHA256 of `REDWING_SECRET` and `desk|<date>`) and returns the answer, the proof and the decoded clues. A list containing the right answer, fewer than six guesses, or a date after tomorrow gets nothing. The deploy workflow publishes it whenever these repository secrets exist (Settings → Secrets and variables → Actions):

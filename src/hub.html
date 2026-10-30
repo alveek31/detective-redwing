@@ -2,22 +2,23 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Figtree:wght@400;600;700&display=swap">
 <style>
 /* Sticker theme. Layout: masthead (wordmark, live countdown), today's date set large with the date on a yellow sticker,
-   a two-up shelf of slightly crooked sticker tiles with animated art, and a full-width "coming soon" strip.
+   a two-up shelf of slightly crooked sticker tiles with animated art, and a dashed "coming soon" tile in the spare cell.
    Motion: one load sequence, squash-and-stretch art per game, tiles tilt toward the pointer. */
 :root {
   --bg: #DCE8FF; --card: #FFFFFF; --ink: #141414; --muted: #474C59; --sun: #FFC93C; --on-btn: #141414; --wine: #8E1430;
   /* One pair per game: --xx is the button, --xx-field the art panel behind the drawing. */
   --rw: #E8413C; --rw-field: #E8413C;
   --tm: #2FA36B; --tm-field: #2FA36B;
+  --ns: #F2A63A; --ns-field: #262A5A;
   --display: "Bagel Fat One", "Arial Rounded MT Bold", system-ui, sans-serif;
   --body: "Figtree", "Helvetica Neue", Arial, sans-serif;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #16171D; --card: #22242D; --ink: #F4F1E8; --muted: #B8BCCA; --on-btn: #16171D;
-  --rw: #FF6B5E; --rw-field: #C9332F; --tm: #45C487; --tm-field: #23855A; color-scheme: dark } }
+  --rw: #FF6B5E; --rw-field: #C9332F; --tm: #45C487; --tm-field: #23855A; --ns: #F7B24F; --ns-field: #1B1E44; color-scheme: dark } }
 :root[data-theme="dark"] {
   --bg: #16171D; --card: #22242D; --ink: #F4F1E8; --muted: #B8BCCA; --on-btn: #16171D;
-  --rw: #FF6B5E; --rw-field: #C9332F; --tm: #45C487; --tm-field: #23855A; color-scheme: dark }
+  --rw: #FF6B5E; --rw-field: #C9332F; --tm: #45C487; --tm-field: #23855A; --ns: #F7B24F; --ns-field: #1B1E44; color-scheme: dark }
 * { box-sizing: border-box }
 body { background: var(--bg); color: var(--ink); font: 17px/1.55 var(--body); overflow-x: hidden; }
 .wrap { max-width: 1080px; margin: 0 auto; padding-block: 28px 64px;
@@ -43,21 +44,21 @@ body { background: var(--bg); color: var(--ink); font: 17px/1.55 var(--body); ov
 .today p { margin: 28px 0 0; color: var(--muted); max-width: 46ch; font-size: 18px; }
 
 /* Shelf. To add a game: copy a tile, give it a class, add its --xx / --xx-field tokens (light and both dark blocks),
-   copy the two ".redwing" rules below for it, and swap or remove the coming-soon strip. */
+   copy the two ".redwing" rules below for it, and swap or remove the coming-soon tile (it fills the spare cell beside an odd tile). */
 .shelf { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; margin-top: 56px; perspective: 1200px; }
 .game { --rx: 0deg; --ry: 0deg; --rot: 0deg; --lift: 0px;
   display: flex; flex-direction: column; background: var(--card); border: 3px solid var(--ink); border-radius: 26px; box-shadow: 7px 7px 0 var(--ink);
   overflow: hidden; color: inherit; text-decoration: none;
   transform: translateY(var(--lift)) rotate(var(--rot)) rotateX(var(--rx)) rotateY(var(--ry));
   transition: transform .45s cubic-bezier(.3,1.6,.5,1); will-change: transform; }
-.redwing { --rot: -1.2deg; } .manners { --rot: 1deg; }
+.redwing { --rot: -1.2deg; } .manners { --rot: 1deg; } .nightshift { --rot: -.8deg; }
 .game:hover { --rot: 0deg; --lift: -6px; }
 .game.tilting { transition: transform .08s linear; }
 .game:focus-visible { outline: 4px dashed var(--ink); outline-offset: 6px; }
 .art { position: relative; height: 250px; overflow: hidden; border-bottom: 3px solid var(--ink); }
 .art::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle, rgba(255,255,255,.18) 2px, transparent 2.5px) 0 0 / 22px 22px; }
 .art svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; }
-.redwing .art { background: var(--rw-field); } .manners .art { background: var(--tm-field); }
+.redwing .art { background: var(--rw-field); } .manners .art { background: var(--tm-field); } .nightshift .art { background: var(--ns-field); }
 .body { display: flex; flex-direction: column; gap: 8px; padding: 22px 24px 26px; flex: 1; }
 .no { align-self: flex-start; padding: 3px 12px; background: var(--sun); color: #141414; border: 2px solid var(--ink); border-radius: 999px;
   font-weight: 700; font-size: 14px; font-variant-numeric: tabular-nums; }
@@ -66,7 +67,7 @@ body { background: var(--bg); color: var(--ink); font: 17px/1.55 var(--body); ov
 .play { margin-top: auto; align-self: flex-start; padding: 12px 22px; border: 3px solid var(--ink); border-radius: 999px; box-shadow: 3px 3px 0 var(--ink);
   font-weight: 700; color: var(--on-btn); transition: transform .3s cubic-bezier(.3,1.8,.5,1); }
 .gap { height: 14px; flex: none; }
-.redwing .play { background: var(--rw); } .manners .play { background: var(--tm); }
+.redwing .play { background: var(--rw); } .manners .play { background: var(--tm); } .nightshift .play { background: var(--ns); }
 .game:hover .play { transform: scale(1.06) rotate(-2deg); }
 
 /* Redwing: the hat hops with squash and stretch, and a pair of eyes peeks out from under it each time it lifts. */
@@ -89,8 +90,20 @@ body { background: var(--bg); color: var(--ink); font: 17px/1.55 var(--body); ov
 @keyframes blob { 0%, 48% { opacity: 0; transform: none } 51% { opacity: 1; transform: none } 70% { opacity: 1; transform: translate(var(--dx), var(--dy)) scale(.8) }
   74%, 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(.5) } }
 
+/* Night Shift: windows flicker in the sleeping city, and a role card hops up from behind the rooftops, flips to reveal the Mafia, and ducks back down. */
+.win { animation: win 3.2s steps(1) infinite; } .win.b { animation-delay: -1.1s } .win.c { animation-delay: -2.3s }
+@keyframes win { 0%, 60% { opacity: 1 } 61%, 80% { opacity: .15 } 81%, 100% { opacity: 1 } }
+.rolecard { transform-box: view-box; transform-origin: 160px 200px; animation: rolehop 4.4s cubic-bezier(.4,0,.3,1) infinite; }
+@keyframes rolehop { 0%, 8% { transform: translateY(70px) } 22% { transform: translateY(-6px) scale(.96, 1.06) } 30%, 74% { transform: none } 84% { transform: translateY(-8px) } 96%, 100% { transform: translateY(70px) } }
+.cardflip { transform-box: view-box; transform-origin: 160px 0; animation: cardflip 4.4s ease-in-out infinite; }
+@keyframes cardflip { 0%, 34% { transform: scaleX(1) } 40% { transform: scaleX(0) } 46%, 100% { transform: scaleX(1) } }
+.cardback { animation: cardside 4.4s steps(1) infinite; } .cardface { animation: cardside 4.4s steps(1) infinite reverse; }
+@keyframes cardside { 0%, 40% { opacity: 1 } 40.01%, 100% { opacity: 0 } }
+.nsmoon { transform-box: view-box; transform-origin: 236px 62px; animation: nsmoon 6s ease-in-out infinite; }
+@keyframes nsmoon { 0%, 100% { transform: rotate(-6deg) } 50% { transform: rotate(6deg) translateY(-3px) } }
+
 /* Coming soon strip */
-.soon { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 16px 28px; padding: 22px 28px; border: 3px dashed var(--muted); border-radius: 26px; }
+.soon { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 16px; padding: 28px; border: 3px dashed var(--muted); border-radius: 26px; }
 .soon svg { width: 92px; height: 80px; flex: none; color: var(--muted); }
 .soon h2 { font: 400 28px/1.1 var(--display); margin: 0; color: var(--muted); }
 .soon p { margin: 4px 0 0; color: var(--muted); }
@@ -104,7 +117,7 @@ footer { margin-top: 52px; display: flex; flex-wrap: wrap; justify-content: spac
 @keyframes slap { from { transform: scale(1.35) rotate(6deg); opacity: 0 } to { transform: none; opacity: 1 } }
 .today p.rise { animation-delay: .3s; }
 .shelf > .rise { animation-name: lift; }
-.shelf > .rise:nth-child(1) { animation-delay: .4s } .shelf > .rise:nth-child(2) { animation-delay: .5s } .shelf > .rise:nth-child(3) { animation-delay: .6s }
+.shelf > .rise:nth-child(1) { animation-delay: .4s } .shelf > .rise:nth-child(2) { animation-delay: .5s } .shelf > .rise:nth-child(3) { animation-delay: .6s } .shelf > .rise:nth-child(4) { animation-delay: .7s }
 @keyframes lift { from { translate: 0 48px; opacity: 0 } to { translate: 0 0; opacity: 1 } }
 
 @media (max-width: 720px) {
@@ -119,6 +132,7 @@ footer { margin-top: 52px; display: flex; flex-wrap: wrap; justify-content: spac
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .pop, .blob { opacity: 0; }
+  .cardface { opacity: 0; }
 }
 </style>
 <div class="wrap">
@@ -192,6 +206,41 @@ footer { margin-top: 52px; display: flex; flex-wrap: wrap; justify-content: spac
         <p>The guests called ahead with their grudges. Seat everyone before dinner is ruined, with three wrong guesses to spare.</p>
         <span class="gap"></span>
         <span class="play">Set today's table</span>
+      </div>
+    </a>
+
+    <a class="game nightshift rise" href="https://nightshift.brainbrew.fun/">
+      <div class="art">
+        <svg viewBox="0 0 320 240" aria-hidden="true" preserveAspectRatio="xMidYMid meet" stroke="#141414" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+          <path class="nsmoon" d="M246 34a30 30 0 1 0 20 50 26 26 0 0 1-20-50z" fill="#FFC93C"/>
+          <circle cx="62" cy="40" r="2.5" fill="#FFF1DE" stroke="none"/><circle cx="104" cy="22" r="2" fill="#FFF1DE" stroke="none"/><circle cx="186" cy="30" r="2" fill="#FFF1DE" stroke="none"/><circle cx="292" cy="112" r="2.5" fill="#FFF1DE" stroke="none"/>
+          <g class="rolecard">
+            <g class="cardflip">
+              <g class="cardback">
+                <rect x="128" y="84" width="64" height="88" rx="9" fill="#141838"/>
+                <path d="M170 106a16 16 0 1 0 10 28 14 14 0 0 1-10-28z" fill="#FFC93C" stroke="none"/>
+              </g>
+              <g class="cardface">
+                <rect x="128" y="84" width="64" height="88" rx="9" fill="#C9332F"/>
+                <path d="M141 122c6-6 14-6 19-1 5-5 13-5 19 1-1 9-8 12-12 12-3 0-5-2-7-4-2 2-4 4-7 4-4 0-11-3-12-12z" fill="#141414" stroke="none"/>
+                <circle cx="150" cy="124" r="2.6" fill="#C9332F" stroke="none"/><circle cx="170" cy="124" r="2.6" fill="#C9332F" stroke="none"/>
+              </g>
+            </g>
+          </g>
+          <path d="M-120 244V176h44v-30h40v24h30v-26h40v40h30v-56h46v52h20v-34h42v48h28v-38h40v24h40v-30h36v40h34v-22h40v86z" fill="#0B0E1B"/>
+          <g fill="#FFC93C" stroke="none">
+            <rect class="win" x="44" y="154" width="9" height="11" rx="1.5"/><rect class="win b" x="80" y="178" width="9" height="11" rx="1.5"/><rect class="win c" x="112" y="140" width="9" height="11" rx="1.5"/>
+            <rect class="win" x="134" y="164" width="9" height="11" rx="1.5"/><rect class="win b" x="196" y="160" width="9" height="11" rx="1.5"/><rect class="win c" x="246" y="176" width="9" height="11" rx="1.5"/>
+            <rect class="win b" x="284" y="196" width="9" height="11" rx="1.5"/><rect class="win" x="216" y="196" width="9" height="11" rx="1.5"/>
+          </g>
+        </svg>
+      </div>
+      <div class="body">
+        <span class="no">Party game · 4 to 16 players</span>
+        <h2>Night Shift</h2>
+        <p>Mafia, Werewolf or Chor-Police for one room. Phones deal the secret cards and the host reads the night.</p>
+        <span class="gap"></span>
+        <span class="play">Play with friends</span>
       </div>
     </a>
 
