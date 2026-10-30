@@ -29,7 +29,7 @@ dist/             the built site (ignored by git, made by `npm run build`)
 
    Copy any images the same way Redwing copies `og.png` and `icon-180.png`. Note that `meta()` currently points every page's preview image at `redwing/og.png`; if your game has its own picture, add an `image` option to `meta()` rather than changing Redwing's.
 
-3. **List it on the home page.** In `src/hub.html`, add a card inside `<main class="shelf">`, before the "More games soon" card:
+3. **List it on the home page.** In `src/hub.html`, the games sit in two sections: **Daily puzzles** and **Party games**. Add a card inside the right section's `<div class="shelf">`, before that section's "coming soon" card:
 
    ```html
    <a class="game" href="wordy/">
