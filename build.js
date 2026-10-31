@@ -88,13 +88,19 @@ function opensSeating(id, lock, seating) {
     d.setAuthTag(tag); d.update(raw.subarray(0, raw.length - 16)); d.final(); return true;
   } catch (e) { return false; }
 }
-// One dinner as the page sees it. `open` (the seating plan, seat by seat) is added only when it may be shown.
+// The seating, lightly scrambled, so the page can show it as soon as a dinner is ruined (3 wrong guesses).
+// This is not a lock: anyone who reads the page's code can unscramble it. It only keeps the plan out of plain sight.
+function sealPad(id) { return crypto.createHash('sha256').update('tablemanners-seal|' + id).digest(); }
+function sealSeating(id, seating) { const pad = sealPad(id); return Buffer.from(seating.map((g, i) => g ^ pad[i])).toString('base64'); }
+function unsealSeating(id, seal) { const pad = sealPad(id); return [...Buffer.from(seal, 'base64')].map((b, i) => b ^ pad[i]); }
+// One dinner as the page sees it. `open` (the seating plan, seat by seat) is added once the plan is public;
+// until then `seal` carries it scrambled for the reveal after a ruined dinner.
 function makeDinner(id, cfg, label, reveal, iter) {
   const p = Manners.generate(mannersSeed(id), cfg.n, cfg.level);
   if (Manners.countSolutions(p.clues, Manners.permutations(p.n), p.n) !== 1) throw new Error('Dinner ' + id + ' does not have exactly one seating');
   const seating = []; p.solution.forEach((seat, guest) => { seating[seat] = guest; });
   const out = { id, n: p.n, level: p.level, label, names: p.names, clues: p.clues, lock: lockSeating(id, seating, iter || MANNERS_ITER) };
-  if (reveal) out.open = seating;
+  if (reveal) out.open = seating; else out.seal = sealSeating(id, seating);
   return out;
 }
 function mannersDay(date) { return Manners.DAYS[new Date(date + 'T00:00:00Z').getUTCDay()]; }
@@ -167,5 +173,5 @@ function build() {
   console.log('Built dist/index.html, dist/redwing/index.html, dist/table-manners/index.html, ' + Object.keys(index.daily).length + ' daily and ' + PRACTICE + ' practice cases');
 }
 
-module.exports = { publicCase, makeCase, openLock, revealed, deskKey, makeDinner, opensSeating };
+module.exports = { publicCase, makeCase, openLock, revealed, deskKey, makeDinner, opensSeating, unsealSeating };
 if (require.main === module) build();

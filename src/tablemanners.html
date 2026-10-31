@@ -1493,6 +1493,14 @@ function themeCSS(){
 }
 
 /* ---------- UI ---------- */
+/* the plan for a ruined dinner: public files carry it as `open`; today's carries it lightly scrambled as `seal` */
+async function planOf(f){
+  if(f.open) return f.open;
+  if(!f.seal) return null;
+  try{ const pad=new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode("tablemanners-seal|"+f.id)));
+    const plan=Array.from(Uint8Array.from(atob(f.seal),c=>c.charCodeAt(0)),(b,i)=>b^pad[i]);
+    return plan.length===f.n&&new Set(plan).size===f.n&&plan.every(g=>g>=0&&g<f.n)?plan:null }catch(e){ return null }
+}
 if(typeof document!=="undefined") boot();
 
 function boot(){
@@ -1546,7 +1554,7 @@ async function loadDaily(){
   if(my!==loadToken) return;
   mode="daily"; P=f;
   S=store.get("tablemanners:game:"+todayKey,null)||fresh();
-  if(S.done==="ruined"&&P.open&&!S.revealed){S.seating=P.open.slice();S.revealed=true;save()}   // the plan has unlocked since
+  if(S.done==="ruined"&&!S.revealed){const plan=await planOf(P);if(my!==loadToken)return;if(plan){S.seating=plan.slice();S.revealed=true;save()}}   // games ruined before the plan showed straight away
   $("practiceBanner").hidden=true; start(); yesterdaysPlan();
 }
 let practiceCodes=null;
@@ -1784,7 +1792,7 @@ $("checkBtn").addEventListener("click",async()=>{
   else{S.wrong++;
     if(S.wrong>=MAX_WRONG){S.done="ruined";say(pick(hostLine("ruined")),true);track("failed");
       S.lastTry=S.seating.slice();
-      if(P.open){S.seating=P.open.slice();S.revealed=true}      // practice dinners (and past ones) come unlocked
+      const plan=await planOf(P); if(plan){S.seating=plan.slice();S.revealed=true}      // show how everyone should have sat, straight away
       finish(false)}
     else say(pick(hostLine(S.wrong===1?"wrong1":"wrong2")),true);
     const w=$("roomWrap");w.classList.remove("shake");void w.offsetWidth;w.classList.add("shake")}
