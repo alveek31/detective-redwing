@@ -3,13 +3,14 @@
 //    checked with a separate solver that works from the drawn room, not the game's own rule code.
 // 2. Every note reads correctly in every scheduled room: right caller, right names, no repeats, one sentence.
 // 3. The room calendar follows the rules: restaurant on weekdays, one room per weekend, holidays take over.
-// 4. Built dinner files carry no answer, and their lock opens only with the right seating.
+// 4. Built dinner files carry no readable answer, their lock opens only with the right seating, and the scrambled
+//    plan the page shows after a ruined dinner unscrambles (in the page's own code) to the right seating.
 const fs = require('fs');
 const html = fs.readFileSync(__dirname + '/tablemanners.html', 'utf8');
 const js = html.split('<script>')[1].split('</script>')[0].replace('if(typeof document!=="undefined") boot();', '');
 const E = require('./tablemanners-engine.js');
-const { makeDinner, opensSeating } = require('../build.js');
-const page = new Function(js + '; return {LAUNCH, textsFor, THEME_BY_ID, EVERYDAY, PRIORITY, WEEKEND, roomForDate, setT: (t) => { T = t; }, sideWords: (t) => sideWords(t)};')();
+const { makeDinner, opensSeating, unsealSeating } = require('../build.js');
+const page = new Function(js + '; return {LAUNCH, textsFor, THEME_BY_ID, EVERYDAY, PRIORITY, WEEKEND, roomForDate, planOf, setT: (t) => { T = t; }, sideWords: (t) => sideWords(t)};')();
 const G = { ...page, generate: E.generate, DAYS: E.DAYS, permutations: E.permutations };
 
 const DAYS_TO_CHECK = +process.argv[2] || 400;
@@ -89,6 +90,7 @@ for (const [date, room] of [['2026-10-31', 'halloween'], ['2026-11-26', 'thanksg
 }
 
 // --- 4. what the page receives ---
+const sealChecks = [];
 for (let i = 0; i < 12; i++) {
   const cfg = G.DAYS[i % 7], id = 'lock-test-' + i, f = makeDinner(id, cfg, cfg.label, false, 1000), text = JSON.stringify(f);
   if ('solution' in f || 'open' in f || /solution|"open"/.test(text)) fail(id, 'dinner file leaks the answer');
@@ -98,7 +100,12 @@ for (let i = 0; i < 12; i++) {
   for (let k = 1; k < right.length; k++) { const wrong = right.slice(k).concat(right.slice(0, k));   // every rotation of the right plan is wrong
     if (opensSeating(id, f.lock, wrong)) fail(id, 'lock opens with a wrong seating'); }
   if (!makeDinner(id, cfg, cfg.label, true, 1000).open) fail(id, 'revealed dinner has no plan');
+  if (!f.seal || f.seal.includes(right.join(''))) fail(id, 'dinner file has no scrambled plan, or it is readable');
+  if (!process.env.REDWING_SECRET && unsealSeating(id, f.seal).join() !== right.join()) fail(id, 'scrambled plan is not the right seating');
+  sealChecks.push(page.planOf(f).then((plan) => { if (!plan || plan.join() !== unsealSeating(id, f.seal).join()) fail(id, 'page unscrambles a different plan'); }));
 }
 
+Promise.all(sealChecks).then(() => {
 console.log('Table Manners: ' + dinners.length + ' dinners, ' + notes + ' notes across ' + rooms.length + ' rooms, 2 years of room calendar' + (failures ? ': ' + failures + ' problems' : ': all good'));
 process.exit(failures ? 1 : 0);
+});
