@@ -47,7 +47,7 @@ Visits are counted with Cloudflare Web Analytics (token in `package.json` under 
 
 A live party game for one room (Mafia, Werewolf or Chor-Police): one phone hosts, everyone else holds a secret role card on their own phone. Unlike the daily puzzles it needs a live server, so it isn't built from this repo:
 
-- Code: [naqvikhan/night-shift](https://github.com/naqvikhan/night-shift). It deploys from there with its own GitHub Actions workflow.
+- Code: `naqvikhan/night-shift`, a private repository (ask its owner for access). It deploys from there with its own GitHub Actions workflow.
 - Hosting: a separate Cloudflare Worker named `nightshift` on this account, which serves the page and the game rooms (Durable Objects). It doesn't touch `worker/` or this site's build.
 - Address: `nightshift.brainbrew.fun`, attached to that Worker as a Custom Domain in the Cloudflare dashboard.
 - Here it is only a tile on the home page (`src/hub.html`) linking to that address.
