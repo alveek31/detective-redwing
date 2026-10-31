@@ -158,10 +158,6 @@ button.btn:disabled{opacity:.45;cursor:not-allowed}
 
 .result{background:var(--surface);border:1.5px solid var(--accent);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px}
 .result.lost{border-color:var(--bad)}
-.yesterday details{background:var(--surface);border:1px dashed var(--line);border-radius:12px;padding:10px 12px;font-size:.88rem}
-.yesterday summary{cursor:pointer;font-weight:700}
-.yesterday .answer-legend{margin-top:8px}
-.yesterday .small{color:var(--muted);font-size:.8rem;margin:8px 0 0}
 .answer{display:flex;flex-direction:column;gap:8px}
 .answer-intro,.answer-foot{font-size:.88rem}
 .answer-foot{color:var(--muted);font-size:.8rem}
@@ -258,7 +254,6 @@ footer{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-s
         <button class="btn" id="clearBtn">Clear table</button>
       </div>
       <div class="result-slot" id="resultBox"></div>
-      <div class="yesterday" id="yesterday" hidden></div>
     </div>
 
     <div class="right">
@@ -1555,7 +1550,7 @@ async function loadDaily(){
   mode="daily"; P=f;
   S=store.get("tablemanners:game:"+todayKey,null)||fresh();
   if(S.done==="ruined"&&!S.revealed){const plan=await planOf(P);if(my!==loadToken)return;if(plan){S.seating=plan.slice();S.revealed=true;save()}}   // games ruined before the plan showed straight away
-  $("practiceBanner").hidden=true; start(); yesterdaysPlan();
+  $("practiceBanner").hidden=true; start();
 }
 let practiceCodes=null;
 async function loadPractice(){
@@ -1578,21 +1573,6 @@ async function opensLock(seating){
     await crypto.subtle.decrypt({name:"AES-GCM",iv:b64(L.iv)},key,b64(L.data));
     return true;
   }catch(e){ return false }
-}
-/* once yesterday's dinner is over everywhere, its file carries the plan: show it if yesterday went wrong */
-async function yesterdaysPlan(){
-  const old=store.get("tablemanners:game:"+yestKey,null), box=$("yesterday");
-  box.hidden=true; if(!old||old.done!=="ruined") return;
-  let f; try{ f=await getDinner(yestKey) }catch(e){ return }
-  if(!f.open) return;
-  const room=THEME_BY_ID[roomForDate(new Date(today.getFullYear(),today.getMonth(),today.getDate()-1)).room]||T;
-  const side=s=>{const x=(room.sideNames&&room.sideNames[s])||s;return x[0].toUpperCase()+x.slice(1)+" side"};
-  const spot=i=>i===0?"Head of the table":(seatSide(i,f.n)?side(seatSide(i,f.n)):"Foot of the table");
-  const right=old.lastTry?f.open.filter((g,i)=>old.lastTry[i]===g).length:null;
-  box.innerHTML=`<details><summary>Yesterday's dinner was ruined. Here's how everyone should have sat.</summary>
-    <ol class="answer-legend">${f.open.map((g,i)=>`<li><i style="background:${SHIRT[f.names[g].id]}">${f.names[g].nm[0]}</i><span class="nm" style="--c:var(--g${f.names[g].id})">${f.names[g].nm}</span><small>${spot(i)}</small>${old.lastTry?`<b class="${old.lastTry[i]===g?"ok":"no"}">${old.lastTry[i]===g?"✓":"✗"}</b>`:""}</li>`).join("")}</ol>
-    ${right!==null?`<p class="small">Your last try had ${right} of ${f.n} in the right chair.</p>`:""}</details>`;
-  box.hidden=false;
 }
 function fresh(){return {seating:Array(P.n).fill(null),wrong:0,elapsed:0,started:false,done:null,crossed:[],say:null}}
 function save(){ if(mode==="daily") store.set("tablemanners:game:"+todayKey,S) }
@@ -1839,7 +1819,7 @@ function unlockTime(){ // the plan opens once this date has ended everywhere: no
   return t.toLocaleString(undefined,{weekday:"long",hour:"numeric",minute:"2-digit"});
 }
 function answerHTML(){
-  if(!S.revealed) return `<div class="answer"><div class="answer-intro">The seating plan stays locked until today's dinner is over everywhere in the world, so nobody can look up the answer. It opens on <b>${unlockTime()}</b>. Come back then, or tomorrow, to see how everyone should have sat.</div>
+  if(!S.revealed) return `<div class="answer"><div class="answer-intro">The seating plan stays locked until today's dinner is over everywhere in the world, so nobody can look up the answer. It opens on <b>${unlockTime()}</b>. Reload the page then to see how everyone should have sat.</div>
     <div class="answer-foot">Your streak starts again tomorrow.</div></div>`;
   const hadTry=!!S.lastTry, right=hadTry?S.seating.filter((g,i)=>S.lastTry[i]===g).length:null;
   const legend=S.seating.map((g,i)=>{const ok=hadTry&&S.lastTry[i]===g;
